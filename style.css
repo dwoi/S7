@@ -1,0 +1,84 @@
+body {
+	box-sizing: border-box;
+	margin: 0;
+	border: 0;
+	padding: 0;
+	overflow: hidden;
+}
+
+#topArea {
+	width: 100vw;
+	height: 30vh;
+	border-bottom: 2px solid black;
+}
+
+#bottomArea {
+	width: 100vw;
+	height: 70vh;
+}
+
+#viewPortArea {
+	box-sizing: border-box;
+	display: inline-block;
+	width: 70%;
+	height: 100%;
+}
+
+#textEditorArea {
+	display: inline-block;
+	width: 30%;
+	height: 100%;
+	float: right;
+	clear: both;
+}
+
+#textEditor {
+	box-sizing: border-box;
+	width: 100%;
+	height: 100%;
+	resize: none;
+	border-left: 2px solid black;
+}
+
+#sceneArea {
+	display: inline-block;
+	width: 40%;
+	height: 100%;
+	vertical-align: top;
+}
+
+#logoArea {
+	box-sizing: border-box;
+	display: inline-block;
+	vertical-align: top;
+	width: 20%;
+	height: 100%;
+	border-left: 2px solid black;
+	border-right: 2px solid black;
+}
+
+#propertiesArea {
+	display: inline-block;
+	vertical-align: top;
+	width: 40%;
+	height: 100%;
+}
+
+#toolBarArea {
+	border-top: 2px solid black;
+	width: 70%;
+	height: 30px;
+	position: fixed;
+	bottom: 0;
+}
+
+#buttons {
+	width: 100%;
+	text-align: center;
+	height: 30px;
+}
+
+.button {
+	margin: 0 auto;
+	height: 30px;
+}
