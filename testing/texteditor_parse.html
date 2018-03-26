@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<style>
+		body {
+			margin: 0;
+			border: 0;
+		}
+		
+		canvas {
+			width: 100%;
+			height: 50vh;
+			position: block;
+		}
+		
+		#inputField {
+			position: block;
+			width: 60%;
+			height: 40vh;
+		}
+		
+		#submitButton {
+			
+		}
+	</style>
+</head>
+<body>
+	<canvas id="c"></canvas>
+	
+	<textarea id="inputField"></textarea>
+	<button id="submitButton" type="button" onclick="updateCanvas()">Submit</button>
+
+	<script>
+		var canvas = document.getElementById("c");
+		var ctx = canvas.getContext("2d");
+		canvas.width = window.innerWidth;
+		canvas.height = window.innerHeight/2;
+		
+		var parsedText;
+		
+		document.getElementById("inputField").value = "rect(10, 10, 200, 200);";
+		
+		function updateCanvas() {
+			var input = document.getElementById("inputField").value;
+			
+			/*var index = input.search(/rect\s*\(/);
+			//console.log(input, index);
+			
+			var output;
+			if (index !== -1) {
+				var input2 = input.substr(0, index) + "ctx." + input.substr(index);
+				var index2 = input.search(/(\r\n|\r|\n)|;/, index);
+				if (index2 !== -1) {
+					var input3 = input2.substr(0, index2+5) + "ctx.stroke();" + input2.substr(index2+5);
+				}
+			}
+			if (input3 !== undefined) {
+				output = input3;
+			} else if (input2 !== undefined) {
+				output = input2;
+			} else {
+				output = input;
+			}*/
+			
+			var returned = addCode(input, "ctx.", /rect\s*\(/);
+			
+			input = returned[0];
+			
+			if (returned[1] !== -1) {
+				//returned = addCode(input, "ctx.stroke();", /(\r\n|\r|\n)|;/, returned[1], false);
+				returned = addCode(input, "ctx.stroke();", ";", returned[1], false);
+				input = returned[0];
+			}
+			output = input;
+			console.log(output);
+			try {
+				eval(output);
+			} catch(error) {
+				console.error(error);
+			}
+		}
+		
+		function addCode(input, string, regex, index, before) {
+			//only checks for one at the moment
+			if (index === undefined) {
+				index = 0;
+			}
+			
+			//defaults to adding it before
+			if (before === undefined) {
+				before = true;
+			}
+			
+			var replacePos = input.search(regex, index);
+			if (before === false && replacePos !== -1) {
+				replacePos ++;
+				console.log(replacePos);
+			}
+			var output;
+			
+			if (index !== -1) {
+				output = input.substr(0, replacePos) + string + input.substr(replacePos);
+			} else {
+				output = input;
+			}
+			
+			return [output, replacePos];
+		}
+		
+	</script>
+</body>
+</html>

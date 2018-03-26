@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+	
+</head>
+<body>
+	
+	<script>
+
+		'use strict';
+
+		//check for support
+		if (!('indexedDB' in window)) {
+			console.log('This browser doesn\'t support IndexedDB');
+		}
+
+		var dbPromise = indexedDB.open('test-db1', 1);
+
+		
+	</script>
+
+</body>
+</html>

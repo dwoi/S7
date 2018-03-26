@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+	
+</head>
+<body>
+
+	<canvas style="width: 100%; height: 100%;" id='c'></canvas>
+
+	<script>
+	
+		var canvas = document.getElementById('c');
+		var ctx = canvas.getContext('2d');
+		
+		canvas.width = window.innerWidth;
+		canvas.height = window.innerHeight;
+	
+		var mypromise = new Promise(function(resolve, reject) {
+			setTimeout(resolve, 100, 'foo');
+		});
+		
+		
+		var img = new Image();
+		
+		img.src = 'https://mdn.mozillademos.org/files/5397/rhino.jpg';
+		
+		/*function loadedImage() {
+			return new Promise(resolve => {
+				img.addEventListener('load', function() {
+					console.log("image loaded");
+					resolve;
+				});
+			});
+		}
+		loadedImage()
+			.then(ctx.drawImage(img, 10, 10));*/
+			
+		function resolveWhenLoaded() {
+			return new Promise(resolve => {
+				img.addEventListener('load', () => {
+					resolve('loaded');
+				});
+			});
+		}
+		
+		async function asyncImage() {
+			let result = await resolveWhenLoaded();
+			ctx.drawImage(img, 10, 10);
+		}
+		
+		asyncImage();
+		
+	</script>
+
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+	
+</head>
+<body>
+
+	<script src="mylibrary.js"></script>
+	
+	<script>
+	
+		var i = 0;
+		
+		var scene, rect, img, img2;
+		
+		var stop = false;
+		
+		var mouseX, mouseY;
+		
+		function start() {
+			//console.log("pog");
+			var circ = new MYLIB.Circle(100, 100, 50);
+			//circ.draw();
+			
+			var circ2 = new MYLIB.Circle(100.5, 250.5, 50);
+			//circ2.draw();			
+			
+			var circ3 = new MYLIB.Circle(100, 400, 50);
+			//circ3.draw();
+			
+			rect = new MYLIB.Rectangle(400, 100, 100, 60);
+			//rect.draw();
+			
+			var rect2 = new MYLIB.Rectangle(400.5, 200.5, 100, 60);
+			//rect2.draw();
+			
+			img = new MYLIB.Image('https://upload.wikimedia.org/wikipedia/commons/d/dd/Big_%26_Small_Pumkins.JPG', 50, 50, 300, 100);
+			img2 = new MYLIB.Image('https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Kiwi_bird_in_Christchurch%2C_New_Zealand%2C_2002-01-01.jpg/120px-Kiwi_bird_in_Christchurch%2C_New_Zealand%2C_2002-01-01.jpg', 100, 100, 120, 80);
+			
+			scene = new MYLIB.Scene();
+			
+			scene.add(img, circ, circ2, circ3, rect, rect2, img2);
+			scene.draw();
+			
+			window.addEventListener('mousemove', function(e) {
+				mouseX = e.clientX;
+				mouseY = e.clientY;
+				
+				MYLIB.clear();
+				//img.rotate(0.1);
+				
+				img.x = mouseX;
+				img.y = mouseY;
+				scene.draw();
+			});
+		}
+		
+		function update() {
+			/*//console.log(MYLIB.deltaTime);
+			if (!stop) {
+				MYLIB.clear();
+				//img.rotate(0.1);
+				
+				img.x = mouseX;
+				img.y = mouseY;
+				scene.draw();
+			}*/
+		}
+		
+		
+		
+	</script>
+
+</body>
+</html>

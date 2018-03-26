@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<style>
+		body {
+			margin: 0;
+			border: 0;
+		}
+		
+		canvas {
+			width: 100%;
+			height: 50vh;
+			position: block;
+		}
+		
+		#inputField {
+			position: block;
+			width: 60%;
+			height: 40vh;
+		}
+		
+		#submitButton {
+			
+		}
+	</style>
+</head>
+<body>
+	<canvas id="c"></canvas>
+	
+	<textarea id="inputField"></textarea>
+	<button id="submitButton" type="button" onclick="updateCanvas()">Submit</button>
+
+	<script>
+		var canvas = document.getElementById("c");
+		var ctx = canvas.getContext("2d");
+		canvas.width = window.innerWidth;
+		canvas.height = window.innerHeight/2;
+		
+		document.getElementById("inputField").value = "ctx.rect(10, 10, 200, 200);\nctx.stroke();\nctx.rect(10, 10, 300, 300);\nctx.stroke();";
+		
+		function updateCanvas() {
+			var input = document.getElementById("inputField");
+			eval(input.value);
+		}
+	</script>
+</body>
+</html>
