@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+	
+</head>
+<body>
+	<canvas id="c"></canvas>
+	<script src="mylibrary2.js"></script>
+	
+	<script>
+	
+		var canvas = document.getElementById("c");
+		var context = canvas.getContext("2d");
+	
+		var test = new Test();
+
+		test.userStuff = `
+			//this is the circle file that the user would write
+			function start() {
+				console.log(test);
+				test.x = 100;
+				test.y = 100;
+				test.radius = 30;
+				test.draw = function() {
+					context.arc(test.x, test.y, test.radius, 0, 2*Math.PI);
+					context.fill();
+				};
+			}
+			
+			function update() {
+				
+			}
+			
+			function alert() {
+				console.log("bleh");
+			}
+			
+			start();
+		`;
+		
+		/*test.userStuff = `
+			//this is the circle file that the user would write
+			console.log(test);
+			x = 100;
+			y = 100;
+			radius = 30;
+
+		`;*/
+		
+		var lol = new Function('this2', test.userStuff);
+		lol(test);
+		console.log(test);
+		
+	</script>
+
+</body>
+</html>
