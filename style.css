@@ -1,86 +1,109 @@
-body {
+* {
 	box-sizing: border-box;
 	margin: 0;
 	border: 0;
 	padding: 0;
 	overflow: hidden;
+	font-size: 20px;
 }
 
-#topArea {
+#header {
 	width: 100vw;
 	height: 30vh;
-	border-bottom: 2px solid black;
 }
 
-#bottomArea {
+#properties {
+	width: 70%;
+	height: 100%;
+	display: inline-block;
+}
+
+#overview {
+	width: 30%;
+	height: 100%;
+	border-left: 3px solid black;
+	display: inline-block;
+}
+
+#main {
+	border-top: 3px solid black;
 	width: 100vw;
 	height: 70vh;
 }
 
-#viewPortArea {
-	box-sizing: border-box;
-	display: inline-block;
+#viewport {
 	width: 70%;
 	height: 100%;
-}
-
-#textEditorArea {
 	display: inline-block;
-	width: 30%;
-	height: 100%;
-	float: right;
-	clear: both;
+	vertical-align: top;
 }
 
 #textEditor {
-	box-sizing: border-box;
+	width: 30%;
+	height: 100%;
+	border-left: 3px solid black;
+	display: inline-block;
+}
+
+#textArea {
 	width: 100%;
-	height: 100%;
+	height: 93%;
 	resize: none;
-	border-left: 2px solid black;
+	font-size: 16px;
+	word-break: break-all;
+	overflow: auto;
 }
 
-#sceneArea {
-	display: inline-block;
-	width: 40%;
-	height: 100%;
-	vertical-align: top;
+#sceneOverview {
+	display: block;
+	height: 85%;
+	width: 100%;
 }
 
-#logoArea {
-	box-sizing: border-box;
-	display: inline-block;
-	vertical-align: top;
-	width: 20%;
-	height: 100%;
-	border-left: 2px solid black;
-	border-right: 2px solid black;
-	font-size: 50px;
-	text-align: center;
-}
-
-#propertiesArea {
-	display: inline-block;
-	vertical-align: top;
-	width: 40%;
-	height: 100%;
-}
-
-#toolBarArea {
-	border-top: 2px solid black;
-	width: 70%;
-	height: 30px;
-	position: fixed;
-	bottom: 0;
+#projectOverview {
+	display: none;
+	height: 85%;
+	width: 100%;
 }
 
 #buttons {
 	width: 100%;
-	text-align: center;
-	height: 30px;
+	height: 15%;
+	border-top: 2px solid black;
 }
 
-.button {
-	margin: 0 auto;
-	height: 30px;
+#sceneButton, #projectButton{
+	height: 100%;
+	width: 50%;
+}
+
+#sceneButton {
+	float: left;
+	border-right: 2px solid black;
+}
+
+#projectButton {
+	float: right;
+	border-right: 2px solid black;
+}
+
+#toolbar {
+	width: 100%;
+	height: 7%;
+	border-top: 2px solid black;
+}
+
+#textToolbar {
+	width: 100%;
+	height: 7%;
+	border-top: 2px solid black;
+}
+
+#play, #pause, #stop {
+	height: 100%;
+}
+
+#canvas {
+	width: 100%;
+	height: 93%;
 }

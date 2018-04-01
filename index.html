@@ -4,31 +4,94 @@
 	<link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
-
-	<div id="topArea">
-		<div id="sceneArea">
-			<p>Scene Overview</p>
-		</div><div id="logoArea">
-			<p>Logo</p>
-		</div><div id="propertiesArea">
-			<p>Properties</p>
-		</div>
-	</div>
-	<div id="bottomArea">
-		<div id="viewPortArea">
-			<div id="toolBarArea">
-				<div id="buttons">
-					<button id="stopButton" class="button">STOP</button>
-					<button id="pauseButton" class="button">PAUSE</button>
-					<button id="startButton" class="button">START</button>
-				</div>
+	<div id="header">
+		<div id="properties">
+			Properties
+		</div><!--Using a comment to remove whitespace
+		--><div id="overview">
+			<div id="sceneOverview">
+				Scene Overview
+			</div>
+			<div id="projectOverview">
+				Project Overview
+			</div>
+			<div id="buttons">
+				<button id="sceneButton" onclick="showScene()">Scene Overview</button>
 				
+				<button id="projectButton" onclick="showProject()">Project Overview</button>
 			</div>
 		</div>
-		<div id="textEditorArea">
-			<textarea id="textEditor" placeholder="code goes here"></textarea>
-		</div>
 	</div>
-
+	<div id="main">
+		<div id="viewport">
+			<canvas id="canvas"></canvas>
+			<div id="toolbar">
+				<button onclick="play()" id="play">Play</button>
+				
+				<button id="pause">Pause</button>
+				
+				<button id="stop">Stop</button>
+			</div>
+		</div><!--Using a comment to remove whitespace
+		--><div id="textEditor">
+			<textarea id="textArea">Text Editor</textarea>
+			<div id="textToolbar">
+				<button onclick="detachTextEditor()" id="detachButton">Detach</button>
+				<button onclick="increaseFontSize()" id="increaseSizeButton">+</button>
+				<button onclick="decreaseFontSize()" id="decreaseSizeButton">-</button>
+			</div>
+		</div><!--Using a comment to remove whitespace
+		-->
+	</div>
+	
+	<script src="mylibrary.js"></script>
+	<script>
+	
+		var canvas = document.getElementById('canvas');
+		canvas.width = parseFloat(window.getComputedStyle(canvas).getPropertyValue('width'));
+		canvas.height = parseFloat(window.getComputedStyle(canvas).getPropertyValue('height'));
+		
+		console.log(canvas.style, canvas.width, canvas.height);
+		MYLIB.setCanvas(canvas);
+	
+		/*
+			Functions that change the layout of the page
+		*/
+		function showScene() {
+			document.getElementById('sceneOverview').style.display = "block";
+			document.getElementById('projectOverview').style.display = "none";
+		}
+		
+		function showProject() {
+			document.getElementById('projectOverview').style.display = "block";
+			document.getElementById('sceneOverview').style.display = "none";
+		}
+		
+		function detachTextEditor() {
+		
+		}
+		
+		function increaseFontSize() {
+			changeFontSize(1);
+		}
+		
+		function decreaseFontSize() {
+			changeFontSize(-1);
+		}
+		
+		function changeFontSize(amount) {
+			var textArea = document.getElementById('textArea');
+			var fontSize = parseFloat(window.getComputedStyle(textArea).getPropertyValue('font-size'));
+			textArea.style.fontSize = fontSize + amount + 'px';
+		}
+		
+		function play() {
+			var code = document.getElementById('textArea').value;
+			var run = new Function(code + "//# sourceURL=userCode.js").call();
+		}
+		
+		
+	</script>
+	
 </body>
 </html>

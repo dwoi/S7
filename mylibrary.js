@@ -25,10 +25,8 @@
 		document.addEventListener('DOMContentLoaded', thisStart);
 	}
 	
-	function createCanvas(width=window.innerWidth, height=window.innerHeight, canvas) {
-		if (canvas === undefined) {
-			canvas = document.createElement("CANVAS");
-		}
+	function createCanvas(width=window.innerWidth, height=window.innerHeight) {
+		canvas = document.createElement("CANVAS");	
 		context = canvas.getContext("2d");
 		
 		exports.canvas = canvas;
@@ -41,6 +39,13 @@
 		document.body.style.margin = 0;
 		
 		document.body.appendChild(canvas);
+	}
+	
+	function setCanvas(canvas) {
+		context = canvas.getContext("2d");
+		
+		exports.canvas = canvas;
+		exports.context = context;
 	}
 	
 	function thisStart() {
@@ -244,6 +249,6 @@
 	exports.Scene = Scene;
 	exports.Image = _Image;
 	exports.createCanvas = createCanvas;
-	
+	exports.setCanvas = setCanvas;
 	exports.clear = clear;
 })));
