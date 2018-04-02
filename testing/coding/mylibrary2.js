@@ -14,4 +14,7 @@ class Test {
 	eval(code) {
 		console.log(this);
 	}
+	run(code) {
+		new Function(code).call();
+	}
 }

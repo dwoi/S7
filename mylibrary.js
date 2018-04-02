@@ -1,8 +1,5 @@
-(function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
-	typeof define === 'function' && define.amd ? define(['exports'], factory) :
-	(factory((global.MYLIB = global.MYLIB || {})));
-}(this, (function (exports) {
+var MYLIB = {};
+(function () {
 	
 	/*
 	**VARIABLES
@@ -29,8 +26,8 @@
 		canvas = document.createElement("CANVAS");	
 		context = canvas.getContext("2d");
 		
-		exports.canvas = canvas;
-		exports.context = context;
+		MYLIB.canvas = canvas;
+		MYLIB.context = context;
 		
 		canvas.width = width;
 		canvas.height = height;
@@ -44,8 +41,8 @@
 	function setCanvas(canvas) {
 		context = canvas.getContext("2d");
 		
-		exports.canvas = canvas;
-		exports.context = context;
+		MYLIB.canvas = canvas;
+		MYLIB.context = context;
 	}
 	
 	function thisStart() {
@@ -61,7 +58,7 @@
 				//update the deltatime variable
 				var currentTime = Date.now();
 				deltaTime = currentTime - lastTime;
-				exports.deltaTime = deltaTime;
+				MYLIB.deltaTime = deltaTime;
 				lastTime = Date.now();
 				
 				//run update function again
@@ -242,13 +239,13 @@
 		context.closePath();
 	}
 	
-	exports.Object = Object;
-	exports.Shape = Shape;
-	exports.Rectangle = Rectangle;
-	exports.Circle = Circle;
-	exports.Scene = Scene;
-	exports.Image = _Image;
-	exports.createCanvas = createCanvas;
-	exports.setCanvas = setCanvas;
-	exports.clear = clear;
-})));
+	MYLIB.Object = Object;
+	MYLIB.Shape = Shape;
+	MYLIB.Rectangle = Rectangle;
+	MYLIB.Circle = Circle;
+	MYLIB.Scene = Scene;
+	MYLIB.Image = _Image;
+	MYLIB.createCanvas = createCanvas;
+	MYLIB.setCanvas = setCanvas;
+	MYLIB.clear = clear;
+}).call();

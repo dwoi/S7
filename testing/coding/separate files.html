@@ -13,11 +13,14 @@
 		var context = canvas.getContext("2d");
 	
 		var test = new Test();
+		
+		var startEvent = new Event('start');
 
 		test.userStuff = `
 			//this is the circle file that the user would write
+			console.log(this);
 			function start() {
-				console.log(test);
+				console.log(this);
 				test.x = 100;
 				test.y = 100;
 				test.radius = 30;
@@ -34,9 +37,9 @@
 			function alert() {
 				console.log("bleh");
 			}
-			
 			start();
 		`;
+		
 		
 		/*test.userStuff = `
 			//this is the circle file that the user would write
@@ -46,11 +49,15 @@
 			radius = 30;
 
 		`;*/
-		
-		var lol = new Function('this2', test.userStuff);
-		lol(test);
-		console.log(test);
-		
+		console.log(JSON.parse(test.userStuff));
+		var lol = (new Function(test.userStuff + '//# sourceURL=lecode')).bind(test);
+		//console.log(test);
+		document.addEventListener('start', function() {
+			//lol();
+		});
+		//test.run(test.userStuff);
+		//console.log(test);
+		document.dispatchEvent(startEvent);
 	</script>
 
 </body>
