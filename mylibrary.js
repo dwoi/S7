@@ -11,15 +11,15 @@ var MYLIB = {};
 	var lastTime;
 	var deltaTime;
 	
+	var startFunctions = [];
+	var updateFunctions = [];
 	
-	
-	
-	
+	//only run setup once stuff is finished 
 	if (document.readyState === 'complete') {
-		thisStart();
+		setup();
 	} else {
 		//window.addEventListener('load', thisStart);
-		document.addEventListener('DOMContentLoaded', thisStart);
+		document.addEventListener('DOMContentLoaded', setup);
 	}
 	
 	function createCanvas(width=window.innerWidth, height=window.innerHeight) {
@@ -45,28 +45,30 @@ var MYLIB = {};
 		MYLIB.context = context;
 	}
 	
-	function thisStart() {
+	function setup() {
 		//createCanvas();
-		
-		if (window.start || this.start) {
-			window.start();
+		for(var i=0;i<startFunctions.length;i++) {
+			startFunctions[i]();
 		}
-		
-		if (window.update || this.update) {
-			var _update = window.update;
-			window.update = function() {
-				//update the deltatime variable
-				var currentTime = Date.now();
-				deltaTime = currentTime - lastTime;
-				MYLIB.deltaTime = deltaTime;
-				lastTime = Date.now();
-				
-				//run update function again
-				requestAnimationFrame(window.update);
-				return _update.apply(this, arguments);
-			}
-			window.update();
+		animate();
+	}
+	
+	function parseScript(code, object) {
+		//run through code and add functions
+		var functions = (new Function("var start, update;" + code + 'return {start: start, update: update};//# sourceURL=lecode'))();
+		if (functions.start !== undefined) {
+			startFunctions.push(functions.start.bind(object));
 		}
+		if (functions.update !== undefined) {
+			updateFunctions.push(functions.update.bind(object));
+		}
+	}
+	
+	function animate() {
+		for (var i=0;i<updateFunctions.length;i++) {
+			updateFunctions[i]();
+		}
+		requestAnimationFrame(animate);
 	}
 	
 	/*
@@ -82,6 +84,7 @@ var MYLIB = {};
 			this.parent = null;
 			this.children = [];
 			this.scenes = [];
+			this.scripts = [];
 		}
 		
 		rotate(amount) {
@@ -93,6 +96,20 @@ var MYLIB = {};
 				objects[i].parent = this;
 				this.children.push(objects[i]);
 			}
+		}
+		
+		addScript(code="") {
+			//run through code here
+			this.scripts.push(code);
+			parseScript(this.scripts[this.scripts.length-1], this);
+		}
+		
+		updateScript(index=0, code) {
+			if (code !== undefined) {
+				this.scripts[index] = code;
+			}
+			//run through code here
+			parseScript(this.scripts[index], this);
 		}
 	}
 
@@ -184,6 +201,13 @@ var MYLIB = {};
 			} else {
 				imageLoad(this.image, this.x, this.y);
 			}
+		}
+		
+	}
+	
+	class Script {
+		constructor(code) {
+			this.code = code;
 		}
 		
 	}

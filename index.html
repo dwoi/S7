@@ -34,8 +34,7 @@
 			</div>
 		</div><!--Using a comment to remove whitespace
 		--><div id="textEditor">
-			<textarea id="textArea">var rect = new MYLIB.Rectangle(10, 10, 300, 300);
-rect.draw();</textarea>
+			<textarea oninput="updateCode()" id="textArea">var rect = new MYLIB.Rectangle(10, 10, 300, 300);&#13;&#10rect.draw();</textarea>
 			<div id="textToolbar">
 				<button onclick="detachTextEditor()" id="detachButton">Detach</button>
 				<button onclick="increaseFontSize()" id="increaseSizeButton">+</button>
@@ -47,13 +46,25 @@ rect.draw();</textarea>
 	
 	<script src="mylibrary.js"></script>
 	<script>
-	
+		
+		//set up canvas
 		var canvas = document.getElementById('canvas');
 		canvas.width = parseFloat(window.getComputedStyle(canvas).getPropertyValue('width'));
 		canvas.height = parseFloat(window.getComputedStyle(canvas).getPropertyValue('height'));
 		
-		console.log(canvas.style, canvas.width, canvas.height);
 		MYLIB.setCanvas(canvas);
+		
+		var scene = new MYLIB.Scene();
+		
+		var rect = new MYLIB.Rectangle();
+		scene.add(rect);
+		rect.addScript();
+		var selectedObject = rect;
+		
+		function createObject() {
+			
+		}
+		
 	
 		/*
 			Functions that change the layout of the page
@@ -87,8 +98,11 @@ rect.draw();</textarea>
 		}
 		
 		function play() {
-			var code = document.getElementById('textArea').value;
-			var run = new Function(code + "//# sourceURL=userCode.js").call();
+			
+		}
+		
+		function updateCode() {
+			selectedObject.updateScript(0, document.getElementById('textArea').value);
 		}
 		
 		

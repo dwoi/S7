@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<style>
+	canvas {
+		display: block;
+		width: 100vw;
+		height: 100vh;
+	}
+	
+	body {
+		margin: 0;
+	}
+</style>
+	
+</head>
+<body>
+	
+	<canvas id="c"></canvas>
+	
+	<script>
+		var canvas = document.getElementById("c");
+		var ctx = canvas.getContext("2d");
+		
+		var offScreenCanvas = document.createElement("CANVAS");
+		var offCtx = offScreenCanvas.getContext("2d");
+		
+		function setSize(theCanvas) {
+			theCanvas.width = window.innerWidth;
+			theCanvas.height = window.innerHeight;
+		}
+		setSize(canvas);
+		setSize(offScreenCanvas);
+		
+		ctx.rect(5, 5, 100, 100);
+		ctx.fill();
+		
+		offCtx.fillStyle = "green";
+		offCtx.rect(80, 80, 150, 150);
+		offCtx.fill();
+		ctx.drawImage(offScreenCanvas, 0, 0);
+	</script>
+	
+
+</body>
+</html>

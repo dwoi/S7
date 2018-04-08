@@ -1,6 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
+
+<style>
+	canvas {
+		display: block;
+		width: 100vw;
+		height: 100vh;
+	}
+	
+	body {
+		margin: 0;
+	}
+</style>
 	
 </head>
 <body>
@@ -11,33 +23,50 @@
 	
 		var canvas = document.getElementById("c");
 		var context = canvas.getContext("2d");
+		
+		canvas.width = window.innerWidth;
+		canvas.height = window.innerHeight;
 	
 		var test = new Test();
 		
 		var startEvent = new Event('start');
+		var updateEvent = new Event('update');
 
 		test.userStuff = `
 			//this is the circle file that the user would write
-			console.log(this);
+			/*function start() {
+				console.log(this);
+				this.x = 100;
+				this.y = 100;
+				this.radius = 30;
+				this.draw = function() {
+					context.arc(this.x, this.y, this.radius, 0, 2*Math.PI);
+					context.fill();
+				};
+			}*/
+			
 			function start() {
 				console.log(this);
-				test.x = 100;
-				test.y = 100;
-				test.radius = 30;
-				test.draw = function() {
-					context.arc(test.x, test.y, test.radius, 0, 2*Math.PI);
+				this.x = 100;
+				this.y = 100;
+				this.radius = 30;
+				this.draw = function() {
+					context.beginPath();
+					context.arc(this.x, this.y, this.radius, 0, 2*Math.PI);
 					context.fill();
+					context.closePath();
 				};
 			}
 			
 			function update() {
-				
+				context.clearRect(0, 0, canvas.width, canvas.height);
+				this.x +=1;
+				this.draw();
 			}
 			
 			function alert() {
 				console.log("bleh");
 			}
-			start();
 		`;
 		
 		
@@ -49,15 +78,29 @@
 			radius = 30;
 
 		`;*/
-		console.log(JSON.parse(test.userStuff));
-		var lol = (new Function(test.userStuff + '//# sourceURL=lecode')).bind(test);
+		//var start = (new Function(test.userStuff + 'return [start, update];//# sourceURL=lecode'))()[0].bind(test);
+		//var update = (new Function(test.userStuff + 'return [start, update];//# sourceURL=lecode'))()[1].bind(test);
+		
+		var start = (new Function('return [start, update];' + test.userStuff + '//# sourceURL=lecode'))()[0].bind(test);
+		var update = (new Function('return [start, update];' + test.userStuff + '//# sourceURL=lecode'))()[1].bind(test);
 		//console.log(test);
 		document.addEventListener('start', function() {
-			//lol();
+			start();
 		});
+		
+		document.addEventListener('update', function() {
+			update();
+		});
+			
 		//test.run(test.userStuff);
 		//console.log(test);
 		document.dispatchEvent(startEvent);
+		
+		function updateStuff() {
+			requestAnimationFrame(updateStuff);
+			document.dispatchEvent(updateEvent);
+		}
+		updateStuff();
 	</script>
 
 </body>

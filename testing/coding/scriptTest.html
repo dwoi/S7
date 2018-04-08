@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<style>
+	canvas {
+		display: block;
+		width: 100vw;
+		height: 100vh;
+	}
+	
+	body {
+		margin: 0;
+	}
+</style>
+	
+</head>
+<body>
+	
+	<script src="mylibrary.js"></script>
+	<script>
+		MYLIB.createCanvas();
+		var rect = new MYLIB.Rectangle(10, 10, 50, 50);
+		rect.addScript(`
+			function start() {
+				this.draw();
+				
+			}
+			
+			function update() {
+				MYLIB.clear();
+				this.x++;
+				this.draw();
+			}
+			
+			`);
+		//rect.draw();
+		
+		function blurgh() {
+			
+		}
+	</script>
+	
+
+</body>
+</html>

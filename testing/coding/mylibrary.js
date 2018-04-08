@@ -1,8 +1,5 @@
-(function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
-	typeof define === 'function' && define.amd ? define(['exports'], factory) :
-	(factory((global.MYLIB = global.MYLIB || {})));
-}(this, (function (exports) {
+var MYLIB = {};
+(function () {
 	
 	/*
 	**VARIABLES
@@ -14,25 +11,23 @@
 	var lastTime;
 	var deltaTime;
 	
+	var startFunctions = [];
+	var updateFunctions = [];
 	
-	
-	
-	
+	//only run setup once stuff is finished 
 	if (document.readyState === 'complete') {
-		thisStart();
+		setup();
 	} else {
 		//window.addEventListener('load', thisStart);
-		document.addEventListener('DOMContentLoaded', thisStart);
+		document.addEventListener('DOMContentLoaded', setup);
 	}
 	
-	function createCanvas(width=window.innerWidth, height=window.innerHeight, canvas) {
-		if (canvas === undefined) {
-			canvas = document.createElement("CANVAS");
-		}
+	function createCanvas(width=window.innerWidth, height=window.innerHeight) {
+		canvas = document.createElement("CANVAS");	
 		context = canvas.getContext("2d");
 		
-		exports.canvas = canvas;
-		exports.context = context;
+		MYLIB.canvas = canvas;
+		MYLIB.context = context;
 		
 		canvas.width = width;
 		canvas.height = height;
@@ -43,28 +38,33 @@
 		document.body.appendChild(canvas);
 	}
 	
-	function thisStart() {
+	function setCanvas(canvas) {
+		context = canvas.getContext("2d");
+		
+		MYLIB.canvas = canvas;
+		MYLIB.context = context;
+	}
+	
+	function setup() {
 		//createCanvas();
-		
-		if (window.start || this.start) {
-			window.start();
+		for(var i=0;i<startFunctions.length;i++) {
+			startFunctions[i]();
 		}
-		
-		if (window.update || this.update) {
-			var _update = window.update;
-			window.update = function() {
-				//update the deltatime variable
-				var currentTime = Date.now();
-				deltaTime = currentTime - lastTime;
-				exports.deltaTime = deltaTime;
-				lastTime = Date.now();
-				
-				//run update function again
-				requestAnimationFrame(window.update);
-				return _update.apply(this, arguments);
-			}
-			window.update();
+		animate();
+	}
+	
+	function parseScript(code, object) {
+		//run through code and add functions
+		var functions = (new Function(code + 'return {start: start, update: update};//# sourceURL=lecode'))();
+		startFunctions.push(functions.start.bind(object));
+		updateFunctions.push(functions.update.bind(object));
+	}
+	
+	function animate() {
+		for (var i=0;i<updateFunctions.length;i++) {
+			updateFunctions[i]();
 		}
+		requestAnimationFrame(animate);
 	}
 	
 	/*
@@ -80,6 +80,7 @@
 			this.parent = null;
 			this.children = [];
 			this.scenes = [];
+			this.scripts = [];
 		}
 		
 		rotate(amount) {
@@ -91,6 +92,24 @@
 				objects[i].parent = this;
 				this.children.push(objects[i]);
 			}
+		}
+		
+		addScript(code) {
+			if (code === undefined) {
+				console.warn("code is required");
+				return "";
+			}
+			//run through code here
+			this.scripts.push(code);
+			parseScript(this.scripts[this.scripts.length-1], this);
+		}
+		
+		updateScript(index=0, code) {
+			if (code !== undefined) {
+				this.scripts[index] = code;
+			}
+			//run through code here
+			parseScript(this.scripts[index], this);
 		}
 	}
 
@@ -186,6 +205,13 @@
 		
 	}
 	
+	class Script {
+		constructor(code) {
+			this.code = code;
+		}
+		
+	}
+	
 	//draws image when it's loaded
 	async function imageLoad(img, x, y, width, height) {
 		var result = await waitForImage(img);
@@ -237,13 +263,13 @@
 		context.closePath();
 	}
 	
-	exports.Object = Object;
-	exports.Shape = Shape;
-	exports.Rectangle = Rectangle;
-	exports.Circle = Circle;
-	exports.Scene = Scene;
-	exports.Image = _Image;
-	exports.createCanvas = createCanvas;
-	
-	exports.clear = clear;
-})));
+	MYLIB.Object = Object;
+	MYLIB.Shape = Shape;
+	MYLIB.Rectangle = Rectangle;
+	MYLIB.Circle = Circle;
+	MYLIB.Scene = Scene;
+	MYLIB.Image = _Image;
+	MYLIB.createCanvas = createCanvas;
+	MYLIB.setCanvas = setCanvas;
+	MYLIB.clear = clear;
+}).call();
