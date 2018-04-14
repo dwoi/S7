@@ -6,7 +6,7 @@
 <body>
 	<div id="header">
 		<div id="properties">
-			Properties
+			<div id="propertiesTitle"></div>
 		</div><!--Using a comment to remove whitespace
 		--><div id="overview">
 			<div id="sceneOverview">
@@ -34,14 +34,21 @@
 			</div>
 		</div><!--Using a comment to remove whitespace
 		--><div id="textEditor">
-			<textarea oninput="updateCode()" id="textArea">var rect = new MYLIB.Rectangle(10, 10, 300, 300);&#13;&#10rect.draw();</textarea>
+			<textarea spellcheck="false" oninput="updateCode()" id="textArea">function start() {
+
+}
+
+function update() {
+	MYLIB.clear();
+	this.x += 1;
+	this.draw();
+}</textarea>
 			<div id="textToolbar">
 				<button onclick="detachTextEditor()" id="detachButton">Detach</button>
 				<button onclick="increaseFontSize()" id="increaseSizeButton">+</button>
 				<button onclick="decreaseFontSize()" id="decreaseSizeButton">-</button>
 			</div>
-		</div><!--Using a comment to remove whitespace
-		-->
+		</div>
 	</div>
 	
 	<script src="mylibrary.js"></script>
@@ -52,18 +59,181 @@
 		canvas.width = parseFloat(window.getComputedStyle(canvas).getPropertyValue('width'));
 		canvas.height = parseFloat(window.getComputedStyle(canvas).getPropertyValue('height'));
 		
+		var textArea = document.getElementById('textArea');
+		
 		MYLIB.setCanvas(canvas);
 		
 		var scene = new MYLIB.Scene();
+		scene.addScript(`function update() {
+							MYLIB.clear();
+							this.draw();
+						 }
+		`, 'default');//default code to be run in the scene
 		
 		var rect = new MYLIB.Rectangle();
 		scene.add(rect);
-		rect.addScript();
+		rect.addScript(textArea.value);
 		var selectedObject = rect;
 		
-		function createObject() {
+		var activeScene = scene;
+		
+		drawScene();
+		
+		//DEFINING PROPERTIES FOR EACH OBJECT
+		
+		var properties = document.getElementById('properties');
+		
+		function drawProperties() {
+			
+			updatePropertiesName();
+						
+			//remove all current stuff in properties
+			
+			var currProperties = document.getElementsByClassName("propertyColumn");
+			var propLength = currProperties.length;
+			for (var i=0;i<propLength;i++) {
+				properties.removeChild(currProperties[0]);
+			}
+			
+			//decide how many columns to have based on the selected object
+			
+			var numOfColumns = 3;
+			
+			//column 1 is x, y, size, rotation stuff
+			
+			//column 2 is fill/stroke and visiblity colour stuff
+			
+			//column 3 is name and /misc
+			
+			//[name of property, size]
+			
+			//later make this an object system with a name of property, size of box,
+			//type of property, max length of box, etc.
+			var Columns = [[["x", 1, "number"], ["y", 1, "number"], ["width", 1, "number"], 
+				["height", 1, "number"], ["radius", 1, "number"], ["rotation", 1, "number"]],
+				[["fill", 3, "boolean"], ["fillColour", 4, "colour"], ["stroke", 3, "boolean"], 
+				["strokeColour", 3, "colour"], ["strokeSize", 1, "number"]], [["visible", 3, "boolean"], 
+				["opacity", 2, "number"], ["name", 10, "text"]]];
+			
+			//"name", "visible", "fill", "fillColour", "stroke", "strokeColour",
+			
+			for (var j=0;j<numOfColumns;j++) {
+				var column = document.createElement("DIV");
+				column.className = "propertyColumn";
+				column.style.width = 100 / numOfColumns + "%";
+				
+				for (var i=0;i<Columns[j].length;i++) {
+					if (selectedObject[Columns[j][i][0]] !== undefined) {
+						//work out what input is necessary
+						
+						let myinput = document.createElement("INPUT");
+						myinput.type = 'text';
+						
+						myinput.className = "properties";
+						
+						myinput.property = Columns[j][i][0];
+						myinput.propertyType = Columns[j][i][2];
+						
+						myinput.setAttribute("value", selectedObject[Columns[j][i][0]]);
+						
+						myinput.style.textAlign = "center";
+						myinput.setAttribute("size", Columns[j][i][1]);
+						
+						//can't use innerHTML directly on properties because it overwrites event listeners
+						let text = document.createElement("SPAN");
+						text.innerHTML += "<br>" + Columns[j][i][0] + ": ";
+						column.appendChild(text);
+						
+						
+						column.appendChild(myinput);
+						myinput.addEventListener('input', updateProperties);
+						//myinput.value = selectedObject[Column1[i]];
+					}
+				}
+				properties.appendChild(column);
+			}
+			
+			/*for (var i in selectedObject) {
+				for (var j=0;j<RectangleProperties.length;j++) {
+					if (RectangleProperties[j] === i) {
+						properties.innerHTML += "<br>" + i + ": " + selectedObject[i] + "";	
+					}
+				}
+			}
+			
+			if (selectedObject["x"] !== undefined) {
+				properties.innerHTML += "<br>x: " + selectedObject["x"] + "";	
+			}*/
 			
 		}
+		drawProperties();
+		
+		function updatePropertiesName() {
+			document.getElementById("propertiesTitle").innerHTML = "Properties for " + selectedObject.name;
+		}
+		
+		function updateProperties(e) {
+			switch(e.srcElement.propertyType) {
+			
+				case "number":
+					if (!isNaN(e.srcElement.value) && e.srcElement.value !== "") {
+						selectedObject[e.srcElement.property] = parseFloat(e.srcElement.value);
+						drawScene();
+					}
+					break;
+					
+				case "boolean":
+					if (e.srcElement.value === "true" || e.srcElement.value === "false") {
+						//parse as boolean
+						selectedObject[e.srcElement.property] = (e.srcElement.value == "true");
+						drawScene();
+					}
+					break;
+				
+				case "colour":
+					selectedObject[e.srcElement.property] = e.srcElement.value;
+					drawScene();
+					break;
+				
+				case "text":
+					selectedObject[e.srcElement.property] = e.srcElement.value;
+					drawScene();
+					if (e.srcElement.property === "name") {
+						document.getElementById("propertiesTitle").innerHTML = "Properties for " + selectedObject.name;
+					}
+					break;
+					
+				default:
+					console.log("property type wrong?", e.srcElement.propertyType);
+				
+			}
+		}
+		
+		function drawSceneOverview() {
+			var sceneOverview = document.getElementById("sceneOverview");
+			
+			
+		}
+		drawSceneOverview();
+		
+		function drawScene() {
+			MYLIB.clear();
+			activeScene.draw();
+		}
+		
+		//END OF PROPERTIES
+		
+		
+		
+		textArea.addEventListener('keydown', function(e) {
+			if (e.key === "Tab") {
+				e.preventDefault();
+				var caretStart = textArea.selectionStart;
+				var caretEnd = textArea.selectionEnd;
+				textArea.value = textArea.value.substring(0, caretStart) + "    " + textArea.value.substring(caretEnd);
+				textArea.selectionEnd = textArea.selectionStart = caretStart + 4;
+			}
+		});
 		
 	
 		/*
@@ -80,7 +250,25 @@
 		}
 		
 		function detachTextEditor() {
-		
+			var myStyleSheet;
+			var screenWidth = screen.width, screenHeight = screen.height;
+			newWindow = window.open("", "textEditWindow", "width=" + screenWidth + ", height=" + screenHeight + ", location=no, left=0");
+			newWindow.document.body.append(textArea);
+			newWindow.window.addEventListener('unload', function() {
+				console.log("Put text area back");
+			});
+			newWindow.document.title = "Text Editor";
+			
+			window.onunload = function() {
+				newWindow.close();
+			};
+			
+			myStyleSheet = document.createElement('style');
+			myStyleSheet.appendChild(document.createTextNode(""));
+			myStyleSheet.type = "text/css"
+			myStyleSheet.innerHTML = ("textarea { display: block; width: 100%; height: 100%; box-sizing: border-box; resize: none;} body { margin: 0; border: 0;}");
+			
+			newWindow.document.head.appendChild(myStyleSheet);
 		}
 		
 		function increaseFontSize() {
@@ -92,17 +280,17 @@
 		}
 		
 		function changeFontSize(amount) {
-			var textArea = document.getElementById('textArea');
 			var fontSize = parseFloat(window.getComputedStyle(textArea).getPropertyValue('font-size'));
 			textArea.style.fontSize = fontSize + amount + 'px';
 		}
 		
 		function play() {
-			
+			MYLIB.run(scene);
 		}
 		
 		function updateCode() {
-			selectedObject.updateScript(0, document.getElementById('textArea').value);
+			console.log(textArea.value);
+			selectedObject.updateScript(0, textArea.value);
 		}
 		
 		
