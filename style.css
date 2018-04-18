@@ -100,8 +100,18 @@
 	border-top: 2px solid black;
 }
 
+#toolbarCentreButtons {
+	height: 100%;
+	display: table;
+	margin: auto;
+}
+
 #play, #pause, #stop {
 	height: 100%;
+	padding-left: 10px;
+	padding-right: 10px;
+	margin-left: 5px;
+	margin-right: 5px;
 }
 
 #canvas {
@@ -122,4 +132,20 @@ input {
 #propertiesTitle {
 	width: 100%;
 	text-align: center;
+}
+
+#currentScene {
+	overflow: visible;
+	width: 100%;
+	height: 100%;
+}
+
+.sceneChild {
+	float: left;
+	clear: left;
+	display: block;
+}
+
+.sceneChild:hover {
+	border: dashed 1px black;
 }

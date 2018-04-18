@@ -14,32 +14,54 @@ var MYLIB = {};
 	var startFunctions = [];
 	var updateFunctions = [];
 	
+	//remember booleans are values not references
+	var runSpontaneously = true;
+	
 	//var functions = [];
 	
-	//var scripts = [];
+	var objects = [];
 	
 	//only run setup once stuff is finished 
-	/*if (document.readyState === 'complete') {
-		setup();
+	if (document.readyState === 'complete') {
+		if (MYLIB.runSpontaneously === true) {
+			setup();
+		}
 	} else {
 		//window.addEventListener('load', thisStart);
-		document.addEventListener('DOMContentLoaded', setup);
-	}*/
+		document.addEventListener('DOMContentLoaded', function() {
+			if (MYLIB.runSpontaneously === true) {
+				setup();
+			}
+		});
+	}
 	
 	function setup(scene) {
 		//createCanvas();
 		
 		//parse all scripts
-		for (var i=0;i<scene.scripts.length;i++) {
-			parseScript(scene.scripts[i], scene);
-		}
-		for (var i=0;i<scene.children.length;i++) {
-			for (var j=0;j<scene.children[i].scripts.length;j++) {
-				console.log(i, j);
-				parseScript(scene.children[i].scripts[j], scene.children[i]);
+		console.log(MYLIB.runSpontaneously);
+		if (scene !== undefined) {
+			for (var i=0;i<scene.scripts.length;i++) {
+				parseScript(scene.scripts[i], scene);
+			}
+			
+			var sceneChildren = scene.getAllDescendents();
+			for (var i=0;i<sceneChildren.length;i++) {
+				for (var j=0;j<sceneChildren[i].scripts.length;j++) {
+					console.log(i, j);
+					parseScript(sceneChildren[i].scripts[j], sceneChildren[i]);
+				}
+			}
+		//run through all objects
+		} else {
+			
+			for (var i=0;i<objects.length;i++) {
+				for (var j=0;j<objects[i].scripts.length;j++) {
+					parseScript(objects[i].scripts[j], objects[i]);
+				}
 			}
 		}
-
+		
 		for(var i=0;i<startFunctions.length;i++) {
 			startFunctions[i]();
 		}
@@ -94,6 +116,30 @@ var MYLIB = {};
 		requestAnimationFrame(animate);
 	}
 	
+	function addParentProperties(object) {
+		//add x, y, and rotation to child objects
+		var drawX = startProp("x");
+		var drawY = startProp("y");
+		var drawRot = startProp("rotation");
+		
+		function startProp(prop) {
+			var finalProp = 0;
+			addProp(object, prop);
+		
+			function addProp(obj) {
+				
+				finalProp += obj.parent[prop]
+				if (obj.parent.parent !== undefined && obj.parent.parent !== null) {
+					addProp(obj.parent);
+				}
+			}
+			return finalProp;
+		}
+		
+		
+		return {x: drawX, y: drawY, rotation: drawRot};
+	}
+	
 	/*
 	**CLASSES
 	*/
@@ -108,8 +154,8 @@ var MYLIB = {};
 			
 			this.parent = null;
 			this.children = [];
-			this.scenes = [];
 			this.scripts = [];
+			objects.push(this);
 		}
 		
 		rotate(amount) {
@@ -118,9 +164,43 @@ var MYLIB = {};
 		
 		add(...objects) {
 			for (var i=0;i<objects.length;i++) {
+				if (objects[i].parent !== undefined && objects[i].parent !== null) {
+					objects[i].parent.remove(objects[i]);
+				}
 				objects[i].parent = this;
 				this.children.push(objects[i]);
+				
 			}
+		}
+		
+		remove(...objects) {
+			for (var i=0;i<objects.length;i++) {
+				for (var j=0;j<this.children.length;j++) {
+					if (objects[i]===this.children[j]) {
+						this.children.splice(j, 1);
+						objects[i].parent = null;
+					}
+				}
+			}
+		}
+		
+		getAllDescendents() {
+			var array = [];
+			
+			for (var i=0;i<this.children.length;i++) {
+				getDirectDescendents(this.children[i]);
+			}
+			
+			function getDirectDescendents(object) {
+				array.push(object);
+				
+				for (var i=0;i<object.children.length;i++) {
+					getDirectDescendents(object.children[i]);
+				}
+				
+			}
+			
+			return array;
 		}
 		
 		addScript(code="", name) {
@@ -165,22 +245,27 @@ var MYLIB = {};
 		draw() {
 			//rotateContext(this.rotation);
 			if (this.visible === true) {
-				var drawX = this.x;
-				var drawY = this.y;
+				var parentProperties = addParentProperties(this);
+				
+				var drawX = this.x + parentProperties.x;
+				var drawY = this.y + parentProperties.y;
+				var drawRot = this.rotation + parentProperties.rotation;
 				
 				if (Number.isInteger(drawX)) {
-					drawY += 0.5;
+					drawX += 0.5;
 				}
 				if (Number.isInteger(drawY)) {
 					drawY += 0.5;
 				}
 				context.save();
 				context.translate(drawX + this.width/2, drawY + this.height/2);
-				context.rotate(this.rotation);
+				context.rotate(drawRot);
 				
 				context.globalAlpha = this.opacity;
 				
+				context.beginPath();
 				context.rect(-this.width/2, -this.height/2, this.width, this.height);
+				context.closePath();
 				if (this.stroke === true) {
 					context.strokeStyle = this.strokeColour;
 					context.lineWidth = this.strokeSize;
@@ -207,20 +292,31 @@ var MYLIB = {};
 			this.radius = radius;
 		}
 		draw() {
-			context.beginPath();
-			context.arc(this.x, this.y, this.radius, 0, 2*Math.PI);
-			if (this.stroke === true) {
-				context.strokeStyle = this.strokeColour;
-				context.stroke();
+			if (this.visible === true) {
+				
+				var parentProperties = addParentProperties(this);
+				
+				var drawX = this.x + parentProperties.x;
+				var drawY = this.y + parentProperties.y;
+				var drawRot = this.rotation + parentProperties.rotation;
+				//rotate circle????
+				
+				context.beginPath();
+				context.arc(drawX, drawY, this.radius, 0, 2*Math.PI);
+				
+				if (this.stroke === true) {
+					context.strokeStyle = this.strokeColour;
+					context.stroke();
+				}
+				
+				if (this.fill === true) {
+					context.fillStyle = this.fillColour;
+					context.fill();
+				}
+				
+				//close path
+				context.closePath();
 			}
-			
-			if (this.fill === true) {
-				context.fillStyle = this.fillColour;
-				context.fill();
-			}
-			
-			//close path
-			context.closePath();
 		}
 	}
 	
@@ -293,15 +389,19 @@ var MYLIB = {};
 	}
 	
 	class Scene extends Object {
-		constructor() {
-			super();
+		constructor(x=0, y=0) {
+			super(x, y);
 		}
 		
 		draw() {
-			for (var i=0;i<this.children.length;i++) {
-				this.children[i].draw();
+			var descendents = this.getAllDescendents();
+			
+			for (var i=0;i<descendents.length;i++) {
+				descendents[i].draw();
 			}
 		}
+		
+		
 	}
 	
 	/*
@@ -324,6 +424,7 @@ var MYLIB = {};
 		context.closePath();
 	}
 	
+	MYLIB.runSpontaneously = runSpontaneously;
 	MYLIB.Object = Object;
 	MYLIB.Shape = Shape;
 	MYLIB.Rectangle = Rectangle;

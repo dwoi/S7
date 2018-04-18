@@ -10,7 +10,13 @@
 		</div><!--Using a comment to remove whitespace
 		--><div id="overview">
 			<div id="sceneOverview">
-				Scene Overview
+				<div id="currentScene">
+				
+				</div>
+				
+				<div id="allScenes">
+				
+				</div>
 			</div>
 			<div id="projectOverview">
 				Project Overview
@@ -26,11 +32,22 @@
 		<div id="viewport">
 			<canvas id="canvas"></canvas>
 			<div id="toolbar">
-				<button onclick="play()" id="play">Play</button>
+				<span id="toolbarLeftButtons">
+					<button id="addButton">Add</button>
+					
+				</span>
 				
-				<button id="pause">Pause</button>
+				<span id="toolbarCentreButtons">
+					<button onclick="play()" id="play">Play</button>
+					
+					<button id="pause">Pause</button>
+					
+					<button id="stop">Stop</button>
+				</span>
 				
-				<button id="stop">Stop</button>
+				<span id="toolbarRightButtons">
+				
+				</span>
 			</div>
 		</div><!--Using a comment to remove whitespace
 		--><div id="textEditor">
@@ -39,9 +56,7 @@
 }
 
 function update() {
-	MYLIB.clear();
 	this.x += 1;
-	this.draw();
 }</textarea>
 			<div id="textToolbar">
 				<button onclick="detachTextEditor()" id="detachButton">Detach</button>
@@ -63,6 +78,8 @@ function update() {
 		
 		MYLIB.setCanvas(canvas);
 		
+		MYLIB.runSpontaneously = false;
+		
 		var scene = new MYLIB.Scene();
 		scene.addScript(`function update() {
 							MYLIB.clear();
@@ -70,10 +87,27 @@ function update() {
 						 }
 		`, 'default');//default code to be run in the scene
 		
-		var rect = new MYLIB.Rectangle();
+		
+		
+		var circ = new MYLIB.Circle(350, 100, 60);
+		scene.add(circ);
+		
+		var rect2 = new MYLIB.Rectangle(50, 100, 100, 50);
+		
+		rect2.name = "fireRect";
+		rect2.fill = true;
+		rect2.fillColour = "red";
+		
+		var rect = new MYLIB.Rectangle(30, 30, 100, 50);
 		scene.add(rect);
 		rect.addScript(textArea.value);
 		var selectedObject = rect;
+		
+		rect.add(rect2);
+		
+		var rect3 = new MYLIB.Rectangle(10, 10, 50, 20);
+		rect3.name = "testRecto";
+		rect2.add(rect3);
 		
 		var activeScene = scene;
 		
@@ -144,10 +178,11 @@ function update() {
 						text.innerHTML += "<br>" + Columns[j][i][0] + ": ";
 						column.appendChild(text);
 						
-						
 						column.appendChild(myinput);
 						myinput.addEventListener('input', updateProperties);
 						//myinput.value = selectedObject[Column1[i]];
+						
+						
 					}
 				}
 				properties.appendChild(column);
@@ -200,6 +235,7 @@ function update() {
 					drawScene();
 					if (e.srcElement.property === "name") {
 						document.getElementById("propertiesTitle").innerHTML = "Properties for " + selectedObject.name;
+						drawSceneOverview();
 					}
 					break;
 					
@@ -209,22 +245,129 @@ function update() {
 			}
 		}
 		
+		//END OF PROPERTIES
+		
+		var beingDragged;
+		
 		function drawSceneOverview() {
 			var sceneOverview = document.getElementById("sceneOverview");
+			//do current scene first
+			var currScene = document.getElementById("currentScene");
 			
+			var changedScene = false;
 			
+			//clear sceneoverview first
+			while (currScene.children.length>0) {
+				currScene.removeChild(currScene.children[0]);
+			}
+			
+			currScene.addEventListener("dragover", function(e) {
+				e.preventDefault();
+			});
+				
+			currScene.addEventListener("drop", function(e) {
+				e.preventDefault();
+				if (changedScene === false) {
+					beingDragged.parentElement.removeChild(beingDragged);
+							
+					currScene.appendChild(beingDragged);
+					
+					activeScene.add(beingDragged.object);
+					
+					//beingDragged.insertAdjacentHTML("beforebegin", "&emsp;");
+					beingDragged.style.marginLeft = "0px"
+					drawScene();
+				}
+			});
+			
+			for (var i=0;i<activeScene.children.length;i++) {
+				addElement(activeScene.children[i]);
+				function addElement(object) {
+				
+					let DOMElement = document.createElement("SPAN");
+					
+					DOMElement.innerHTML = object.name + "<br>";
+					
+					DOMElement.className = "sceneChild";
+					DOMElement.object = object;
+					
+					DOMElement.draggable = true;
+					
+					DOMElement.addEventListener("dragstart", function(e) {
+						beingDragged = e.target;
+						e.target.style.border = "solid 1px black";
+						//console.log(e.target.innerHTML);
+						changedScene = false;
+					});
+					
+					DOMElement.addEventListener("dragover", function(e) {
+						e.preventDefault();
+					});
+					
+					DOMElement.addEventListener("dragend", function(e) {
+						DOMElement.style.border = "initial";
+						//console.log(DOMElement.className);
+					});
+					
+					DOMElement.addEventListener("drop", function(e) {
+						e.preventDefault();
+						changedScene = true;
+						//prevent childing self and to child
+						if (beingDragged !== e.target && !isRelated(beingDragged, e.target)) {
+							//e.target.add(beingDragged);//fix this
+							beingDragged.parentElement.removeChild(beingDragged);
+							
+							e.target.appendChild(beingDragged);
+							
+							e.target.object.add(beingDragged.object);
+							
+							//beingDragged.insertAdjacentHTML("beforebegin", "&emsp;");
+							beingDragged.style.marginLeft = "26px"
+							drawScene();
+						}
+					});
+					
+					addChildren(DOMElement);
+					
+					if (object.parent.constructor.name === "Scene") {
+						currScene.appendChild(DOMElement);
+					} else {
+						return DOMElement;
+					}
+					
+					function addChildren(element) {
+						for (var i=0;i<element.object.children.length;i++) {
+							var ele = addElement(element.object.children[i]);
+							if (ele !== undefined) {
+								ele.style.marginLeft = "26px";
+								element.appendChild(ele);
+							}
+						}
+					}
+				}
+			}
 		}
 		drawSceneOverview();
+		
+		function isRelated(element, element2) {
+			for (var i=0;i<element.children.length;i++) {
+				if (element2 === element.children[i]) {
+					return true;
+				}
+			}
+			for (var i=0;i<element2.children.length;i++) {
+				if (element === element2.children[i]) {
+					return true;
+				}
+			}
+			return false;
+		}
 		
 		function drawScene() {
 			MYLIB.clear();
 			activeScene.draw();
 		}
-		
-		//END OF PROPERTIES
-		
-		
-		
+
 		textArea.addEventListener('keydown', function(e) {
 			if (e.key === "Tab") {
 				e.preventDefault();
@@ -266,7 +409,8 @@ function update() {
 			myStyleSheet = document.createElement('style');
 			myStyleSheet.appendChild(document.createTextNode(""));
 			myStyleSheet.type = "text/css"
-			myStyleSheet.innerHTML = ("textarea { display: block; width: 100%; height: 100%; box-sizing: border-box; resize: none;} body { margin: 0; border: 0;}");
+			myStyleSheet.innerHTML = (`textarea { display: block; width: 100%; height: 100%;
+			box-sizing: border-box; resize: none;} body { margin: 0; border: 0;}`);
 			
 			newWindow.document.head.appendChild(myStyleSheet);
 		}

@@ -17,7 +17,7 @@
 </head>
 <body>
 	
-	<script src="mylibrary.js"></script>
+	<script src="testlibrary.js"></script>
 	<script>
 		MYLIB.createCanvas();
 		var rect = new MYLIB.Rectangle(10, 10, 50, 50);
@@ -35,6 +35,11 @@
 			
 			`);
 		//rect.draw();
+		
+		var scene = new MYLIB.Scene();
+		scene.add(rect);
+		
+		MYLIB.run(scene);
 		
 		function blurgh() {
 			

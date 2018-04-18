@@ -14,12 +14,42 @@ var MYLIB = {};
 	var startFunctions = [];
 	var updateFunctions = [];
 	
+	//var functions = [];
+	
+	//var scripts = [];
+	
 	//only run setup once stuff is finished 
-	if (document.readyState === 'complete') {
+	/*if (document.readyState === 'complete') {
 		setup();
 	} else {
 		//window.addEventListener('load', thisStart);
 		document.addEventListener('DOMContentLoaded', setup);
+	}*/
+	
+	function setup(scene) {
+		//createCanvas();
+		
+		//parse all scripts
+		for (var i=0;i<scene.scripts.length;i++) {
+			parseScript(scene.scripts[i], scene);
+		}
+		
+		var sceneChildren = scene.getAllDescendents();
+		for (var i=0;i<sceneChildren.length;i++) {
+			for (var j=0;j<sceneChildren[i].scripts.length;j++) {
+				console.log(i, j);
+				parseScript(sceneChildren[i].scripts[j], sceneChildren[i]);
+			}
+		}
+
+		for(var i=0;i<startFunctions.length;i++) {
+			startFunctions[i]();
+		}
+		animate();
+	}
+
+	function run(scene) {
+		setup(scene);
 	}
 	
 	function createCanvas(width=window.innerWidth, height=window.innerHeight) {
@@ -31,33 +61,32 @@ var MYLIB = {};
 		
 		canvas.width = width;
 		canvas.height = height;
-		canvas.style.display = "block";
 		
+		//removes scroll bar from fullscreen canvas
+		canvas.style.display = "block";
 		document.body.style.margin = 0;
 		
 		document.body.appendChild(canvas);
 	}
 	
-	function setCanvas(canvas) {
+	function setCanvas(userCanvas) {
+		canvas = userCanvas;
 		context = canvas.getContext("2d");
 		
 		MYLIB.canvas = canvas;
 		MYLIB.context = context;
 	}
 	
-	function setup() {
-		//createCanvas();
-		for(var i=0;i<startFunctions.length;i++) {
-			startFunctions[i]();
-		}
-		animate();
-	}
-	
-	function parseScript(code, object) {
+	function parseScript(script, object) {
 		//run through code and add functions
-		var functions = (new Function(code + 'return {start: start, update: update};//# sourceURL=lecode'))();
-		startFunctions.push(functions.start.bind(object));
-		updateFunctions.push(functions.update.bind(object));
+		console.log(script);
+		var functions = (new Function("var start, update;" + script.code + 'return {start: start, update: update};//# sourceURL=' + script.name))();
+		if (functions.start !== undefined) {
+			startFunctions.push(functions.start.bind(object));
+		}
+		if (functions.update !== undefined) {
+			updateFunctions.push(functions.update.bind(object));
+		}
 	}
 	
 	function animate() {
@@ -77,9 +106,10 @@ var MYLIB = {};
 			this.y = y;
 			this.rotation = 0;
 			
+			this.name = this.constructor.name;
+			
 			this.parent = null;
 			this.children = [];
-			this.scenes = [];
 			this.scripts = [];
 		}
 		
@@ -89,34 +119,75 @@ var MYLIB = {};
 		
 		add(...objects) {
 			for (var i=0;i<objects.length;i++) {
+				if (objects[i].parent !== undefined && objects[i].parent !== null) {
+					objects[i].parent.remove(objects[i]);
+				}
 				objects[i].parent = this;
 				this.children.push(objects[i]);
+				
 			}
 		}
 		
-		addScript(code) {
-			if (code === undefined) {
-				console.warn("code is required");
-				return "";
+		remove(...objects) {
+			for (var i=0;i<objects.length;i++) {
+				for (var j=0;j<this.children.length;j++) {
+					if (objects[i]===this.children[j]) {
+						this.children.splice(j, 1);
+						objects[i].parent = null;
+					}
+				}
 			}
+		}
+		
+		getAllDescendents() {
+			var array = [];
+			
+			for (var i=0;i<this.children.length;i++) {
+				getDirectDescendents(this.children[i]);
+			}
+			
+			function getDirectDescendents(object) {
+				array.push(object);
+				
+				for (var i=0;i<object.children.length;i++) {
+					getDirectDescendents(object.children[i]);
+				}
+				
+			}
+			
+			return array;
+		}
+		
+		addScript(code="", name) {
 			//run through code here
-			this.scripts.push(code);
-			parseScript(this.scripts[this.scripts.length-1], this);
+			//this.scripts.push(code);
+			//parseScript(this.scripts[this.scripts.length-1], this);
+			if (name !== undefined) {
+				new Script(code, this, name);
+			} else {
+				new Script(code, this);
+			}
 		}
 		
 		updateScript(index=0, code) {
 			if (code !== undefined) {
-				this.scripts[index] = code;
+				this.scripts[index].code = code;
 			}
 			//run through code here
-			parseScript(this.scripts[index], this);
+			//parseScript(this.scripts[index], this);
 		}
 	}
 
 	class Shape extends Object {
 		constructor(x, y) {
 			super(x, y);
-			this.visible = false;
+			this.visible = true;
+			this.fill = false;
+			this.fillColour = "white";
+			this.stroke = true;
+			this.strokeColour = "black";
+			this.strokeSize = 1;
+			this.opacity = 1;
 		}
 	}
 
@@ -128,20 +199,41 @@ var MYLIB = {};
 		}
 		draw() {
 			//rotateContext(this.rotation);
-			if (Number.isInteger(this.x)) {
-				this.x += 0.5;
+			if (this.visible === true) {
+				var drawX = this.x;
+				var drawY = this.y;
+				
+				if (Number.isInteger(drawX)) {
+					drawY += 0.5;
+				}
+				if (Number.isInteger(drawY)) {
+					drawY += 0.5;
+				}
+				context.save();
+				context.translate(drawX + this.width/2, drawY + this.height/2);
+				context.rotate(this.rotation);
+				
+				context.globalAlpha = this.opacity;
+				
+				context.beginPath();
+				context.rect(-this.width/2, -this.height/2, this.width, this.height);
+				context.closePath();
+				if (this.stroke === true) {
+					context.strokeStyle = this.strokeColour;
+					context.lineWidth = this.strokeSize;
+					context.stroke();
+				}
+				
+				if (this.fill === true) {
+					context.fillStyle = this.fillColour;
+					context.fill();
+				}
+				
+				context.restore();
+				
+				//reset opacity
+				context.globalAlpha = 1;
 			}
-			if (Number.isInteger(this.y)) {
-				this.y += 0.5;
-			}
-			context.save();
-			context.translate(this.x + this.width/2, this.y+this.height/2);
-			context.rotate(this.rotation);
-			
-			context.rect(-this.width/2, -this.height/2, this.width, this.height);
-			context.stroke();
-			
-			context.restore();
 		}
 		
 	}
@@ -152,11 +244,23 @@ var MYLIB = {};
 			this.radius = radius;
 		}
 		draw() {
-			context.arc(this.x, this.y, this.radius, 0, 2*Math.PI);
-			context.stroke();
-			
-			//clear path
-			context.beginPath();
+			if (this.visible === true) {
+				context.beginPath();
+				context.arc(this.x, this.y, this.radius, 0, 2*Math.PI);
+				
+				if (this.stroke === true) {
+					context.strokeStyle = this.strokeColour;
+					context.stroke();
+				}
+				
+				if (this.fill === true) {
+					context.fillStyle = this.fillColour;
+					context.fill();
+				}
+				
+				//close path
+				context.closePath();
+			}
 		}
 	}
 	
@@ -206,8 +310,10 @@ var MYLIB = {};
 	}
 	
 	class Script {
-		constructor(code) {
+		constructor(code, object, name="script" + (parseInt(object.scripts.length) + 1)) {
 			this.code = code;
+			this.name = name;
+			object.scripts.push(this);
 		}
 		
 	}
@@ -232,20 +338,19 @@ var MYLIB = {};
 		}
 		
 		draw() {
-			for (var i=0;i<this.children.length;i++) {
-				this.children[i].draw();
+			var descendents = this.getAllDescendents();
+			
+			for (var i=0;i<descendents.length;i++) {
+				descendents[i].draw();
 			}
 		}
+		
+		
 	}
 	
 	/*
 	**FUNCTIONS
 	*/
-	
-	function rotateContext(rotation) {
-		context.save();
-		context.rotate(rotation);
-	}
 	
 	function clear() {
 
@@ -272,4 +377,5 @@ var MYLIB = {};
 	MYLIB.createCanvas = createCanvas;
 	MYLIB.setCanvas = setCanvas;
 	MYLIB.clear = clear;
+	MYLIB.run = run;
 }).call();

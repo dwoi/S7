@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<style>
+	canvas {
+		display: block;
+		width: 100vw;
+		height: 100vh;
+	}
+	
+	body {
+		margin: 0;
+	}
+</style>
+	
+</head>
+<body>
+	
+	<script src="testlibrary.js"></script>
+	<script>
+		MYLIB.createCanvas();
+		
+		
+		var scene = new MYLIB.Scene();
+		
+		var rect = new MYLIB.Rectangle(10, 10, 50, 50);
+		scene.add(rect);
+		
+		var circ = new MYLIB.Circle(50, 50, 20);
+		rect.add(circ);
+		
+		var rect2 = new MYLIB.Rectangle(50, 50, 100, 100);
+		scene.add(rect2);
+		
+		var mymirc = new MYLIB.Circle(100, 20, 30);
+		rect2.add(mymirc);
+		
+		var mycirc = new MYLIB.Circle(20, 100, 30);
+		mymirc.add(mycirc);
+		
+		console.log(scene.getAllDescendents());
+
+	</script>
+	
+
+</body>
+</html>
