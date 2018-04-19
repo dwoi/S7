@@ -30,11 +30,15 @@
 	</div>
 	<div id="main">
 		<div id="viewport">
+			<canvas id="overlayCanvas"></canvas>
 			<canvas id="canvas"></canvas>
 			<div id="toolbar">
 				<span id="toolbarLeftButtons">
 					<button id="addButton">Add</button>
-					
+					<div id="dropdownAddButtons">
+						<button class="addObjectButton" id="addRect" onclick="addObject('Rectangle')">Add Rectangle</button>
+						<button class="addObjectButton" id="addCircle" onclick="addObject('Circle')">Add Circle</button>
+					</div>
 				</span>
 				
 				<span id="toolbarCentreButtons">
@@ -46,7 +50,7 @@
 				</span>
 				
 				<span id="toolbarRightButtons">
-				
+					
 				</span>
 			</div>
 		</div><!--Using a comment to remove whitespace
@@ -240,7 +244,7 @@ function update() {
 					break;
 					
 				default:
-					console.log("property type wrong?", e.srcElement.propertyType);
+					console.warn("property type wrong?", e.srcElement.propertyType);
 				
 			}
 		}
@@ -293,9 +297,24 @@ function update() {
 					
 					DOMElement.draggable = true;
 					
+					DOMElement.addEventListener("mouseover", function(e) {
+						e.target.style.border = "dashed 1px black";
+					});
+					
+					DOMElement.addEventListener("mouseout", function(e) {
+						e.target.style.border = "none";
+					});
+					
+					DOMElement.addEventListener("click", function(e) {
+						selectedObject = e.target.object;
+						drawProperties();
+					});
+					
 					DOMElement.addEventListener("dragstart", function(e) {
 						beingDragged = e.target;
-						e.target.style.border = "solid 1px black";
+						if (e.target.style.border !== "1px solid black") {
+							e.target.style.border = "double 1px black";
+						}
 						//console.log(e.target.innerHTML);
 						changedScene = false;
 					});
@@ -349,6 +368,17 @@ function update() {
 		}
 		drawSceneOverview();
 		
+		//END OF SCENE OVERVIEW
+		
+		function addObject(type) {
+			var temp = new MYLIB[type]();
+			activeScene.add(temp);
+			selectedObject = temp;
+			drawSceneOverview();
+			drawProperties();
+			drawScene();
+		}
+		
 		function isRelated(element, element2) {
 			for (var i=0;i<element.children.length;i++) {
 				if (element2 === element.children[i]) {
@@ -378,6 +408,46 @@ function update() {
 			}
 		});
 		
+		canvas.addEventListener('click', function(e) {
+			//WORK ROTATION LATER
+			
+			//using e.offsetX and e.offsetY
+			var descendents = activeScene.getAllDescendents();
+			for (var i=0;i<descendents.length;i++) {
+				var dims = {x: descendents[i].x, y: descendents[i].y};
+				var parentDims = descendents[i].addParentProperties();
+				
+				dims.x += parentDims.x;
+				dims.y += parentDims.y;
+				
+				if (descendents[i].constructor.name === "Rectangle") {
+					
+					if (e.offsetX >= dims.x && e.offsetY >= dims.y &&
+						e.offsetX <= dims.x + descendents[i].width &&
+						e.offsetY <= dims.y + descendents[i].height) {
+						selectedObject = descendents[i];
+						drawProperties();
+					}
+				}
+				if (descendents[i].constructor.name === "Circle") {
+					if (Math.hypot(Math.abs(e.offsetX - dims.x), Math.abs(e.offsetY - dims.y)) <= descendents[i].radius) {
+						selectedObject = descendents[i];
+						drawProperties();
+					}
+				}
+			}
+		});
+		
+		function drawScaleOverlay() {
+			//using separate canvas for this
+			var overlayCanvas = document.getElementById("overlayCanvas");
+			var overlayCtx = overlayCanvas.getContext('2d');
+			
+			overlayCanvas.width = parseFloat(window.getComputedStyle(overlayCanvas).getPropertyValue('width'));
+			overlayCanvas.height = parseFloat(window.getComputedStyle(overlayCanvas).getPropertyValue('height'));
+			
+			//draw
+		}
 	
 		/*
 			Functions that change the layout of the page

@@ -116,29 +116,7 @@ var MYLIB = {};
 		requestAnimationFrame(animate);
 	}
 	
-	function addParentProperties(object) {
-		//add x, y, and rotation to child objects
-		var drawX = startProp("x");
-		var drawY = startProp("y");
-		var drawRot = startProp("rotation");
-		
-		function startProp(prop) {
-			var finalProp = 0;
-			addProp(object, prop);
-		
-			function addProp(obj) {
-				
-				finalProp += obj.parent[prop]
-				if (obj.parent.parent !== undefined && obj.parent.parent !== null) {
-					addProp(obj.parent);
-				}
-			}
-			return finalProp;
-		}
-		
-		
-		return {x: drawX, y: drawY, rotation: drawRot};
-	}
+	
 	
 	/*
 	**CLASSES
@@ -203,6 +181,33 @@ var MYLIB = {};
 			return array;
 		}
 		
+		addParentProperties() {
+			//add x, y, and rotation to child objects
+			var self = this;
+			
+			var drawX = startProp("x");
+			var drawY = startProp("y");
+			var drawRot = startProp("rotation");
+			
+			function startProp(prop) {
+				var finalProp = 0;
+				
+				addProp(self);
+				
+				function addProp(obj) {
+					
+					finalProp += obj.parent[prop]
+					if (obj.parent.parent !== undefined && obj.parent.parent !== null) {
+						addProp(obj.parent);
+					}
+				}
+				return finalProp;
+			}
+			
+			
+			return {x: drawX, y: drawY, rotation: drawRot};
+		}
+		
 		addScript(code="", name) {
 			//run through code here
 			//this.scripts.push(code);
@@ -245,7 +250,7 @@ var MYLIB = {};
 		draw() {
 			//rotateContext(this.rotation);
 			if (this.visible === true) {
-				var parentProperties = addParentProperties(this);
+				var parentProperties = this.addParentProperties();
 				
 				var drawX = this.x + parentProperties.x;
 				var drawY = this.y + parentProperties.y;
@@ -294,7 +299,7 @@ var MYLIB = {};
 		draw() {
 			if (this.visible === true) {
 				
-				var parentProperties = addParentProperties(this);
+				var parentProperties = this.addParentProperties();
 				
 				var drawX = this.x + parentProperties.x;
 				var drawY = this.y + parentProperties.y;
@@ -306,6 +311,7 @@ var MYLIB = {};
 				
 				if (this.stroke === true) {
 					context.strokeStyle = this.strokeColour;
+					context.lineWidth = this.strokeSize;
 					context.stroke();
 				}
 				
