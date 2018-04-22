@@ -44,28 +44,27 @@
 				<span id="toolbarCentreButtons">
 					<button onclick="play()" id="play">Play</button>
 					
-					<button id="pause">Pause</button>
+					<button onclick="pause()" id="pause">Pause</button>
 					
-					<button id="stop">Stop</button>
+					<button onclick="stop()" id="stop">Stop</button>
 				</span>
 				
-				<span id="toolbarRightButtons">
-					
+				<span id="coords">
+					text
 				</span>
+				
+				<!--<span id="toolbarRightButtons">
+					
+				</span>-->
 			</div>
 		</div><!--Using a comment to remove whitespace
 		--><div id="textEditor">
-			<textarea spellcheck="false" oninput="updateCode()" id="textArea">function start() {
-
-}
-
-function update() {
-	this.x += 1;
-}</textarea>
+			<textarea spellcheck="false" oninput="updateCode()" id="textArea"></textarea>
 			<div id="textToolbar">
-				<button onclick="detachTextEditor()" id="detachButton">Detach</button>
-				<button onclick="increaseFontSize()" id="increaseSizeButton">+</button>
-				<button onclick="decreaseFontSize()" id="decreaseSizeButton">-</button>
+				<button onclick="detachTextEditor()" class="textButtons" id="detachButton">Detach</button>
+				<button onclick="increaseFontSize()" class="textButtons" id="increaseSizeButton">Size +</button>
+				<button onclick="decreaseFontSize()" class="textButtons" id="decreaseSizeButton">Size -</button>
+				<select onchange="scriptChange()" id="scriptSelect"></select>
 			</div>
 		</div>
 	</div>
@@ -78,7 +77,28 @@ function update() {
 		canvas.width = parseFloat(window.getComputedStyle(canvas).getPropertyValue('width'));
 		canvas.height = parseFloat(window.getComputedStyle(canvas).getPropertyValue('height'));
 		
+		var overlayCanvas = document.getElementById("overlayCanvas");
+		var overlayCtx = overlayCanvas.getContext('2d');
+		
+		overlayCanvas.style.width = canvas.width;
+		overlayCanvas.style.height = canvas.height;
+		
+		overlayCanvas.width = canvas.width;
+		overlayCanvas.height = canvas.height;
+
 		var textArea = document.getElementById('textArea');
+		textArea.value = `function start() {\n    \n}\n\nfunction update() {\n    this.x += 1;\n}`;
+		
+		var points = {};
+		var squareSize;
+		var pointsObject;
+		
+		var objectDragged;
+		
+		var mouseDown = false;
+		
+		var running = false;
+		var paused = false;
 		
 		MYLIB.setCanvas(canvas);
 		
@@ -102,12 +122,21 @@ function update() {
 		rect2.fill = true;
 		rect2.fillColour = "red";
 		
-		var rect = new MYLIB.Rectangle(30, 30, 100, 50);
+		var rect = new MYLIB.Rectangle(30, 300, 100, 50);
+		rect.rotation = 1;
 		scene.add(rect);
-		rect.addScript(textArea.value);
+		rect.addScript(textArea.value);	
+		addScriptOption(rect.scripts[0]);
+		
+		rect.addScript(`function start() {\n    this.fill = true;\n    this.fillColour = "green";\n}`);
+		addScriptOption(rect.scripts[1]);
+		//add that script
+		
+		
+		
 		var selectedObject = rect;
 		
-		rect.add(rect2);
+		scene.add(rect2);
 		
 		var rect3 = new MYLIB.Rectangle(10, 10, 50, 20);
 		rect3.name = "testRecto";
@@ -251,7 +280,7 @@ function update() {
 		
 		//END OF PROPERTIES
 		
-		var beingDragged;
+		var elementDragged;
 		
 		function drawSceneOverview() {
 			var sceneOverview = document.getElementById("sceneOverview");
@@ -272,14 +301,14 @@ function update() {
 			currScene.addEventListener("drop", function(e) {
 				e.preventDefault();
 				if (changedScene === false) {
-					beingDragged.parentElement.removeChild(beingDragged);
+					elementDragged.parentElement.removeChild(elementDragged);
 							
-					currScene.appendChild(beingDragged);
+					currScene.appendChild(elementDragged);
 					
-					activeScene.add(beingDragged.object);
+					activeScene.add(elementDragged.object);
 					
-					//beingDragged.insertAdjacentHTML("beforebegin", "&emsp;");
-					beingDragged.style.marginLeft = "0px"
+					//elementDragged.insertAdjacentHTML("beforebegin", "&emsp;");
+					elementDragged.style.marginLeft = "0px"
 					drawScene();
 				}
 			});
@@ -308,10 +337,11 @@ function update() {
 					DOMElement.addEventListener("click", function(e) {
 						selectedObject = e.target.object;
 						drawProperties();
+						drawScaleOverlay();
 					});
 					
 					DOMElement.addEventListener("dragstart", function(e) {
-						beingDragged = e.target;
+						elementDragged = e.target;
 						if (e.target.style.border !== "1px solid black") {
 							e.target.style.border = "double 1px black";
 						}
@@ -332,16 +362,16 @@ function update() {
 						e.preventDefault();
 						changedScene = true;
 						//prevent childing self and to child
-						if (beingDragged !== e.target && !isRelated(beingDragged, e.target)) {
-							//e.target.add(beingDragged);//fix this
-							beingDragged.parentElement.removeChild(beingDragged);
+						if (elementDragged !== e.target && !isRelated(elementDragged, e.target)) {
+							//e.target.add(elementDragged);//fix this
+							elementDragged.parentElement.removeChild(elementDragged);
 							
-							e.target.appendChild(beingDragged);
+							e.target.appendChild(elementDragged);
 							
-							e.target.object.add(beingDragged.object);
+							e.target.object.add(elementDragged.object);
 							
-							//beingDragged.insertAdjacentHTML("beforebegin", "&emsp;");
-							beingDragged.style.marginLeft = "26px"
+							//elementDragged.insertAdjacentHTML("beforebegin", "&emsp;");
+							elementDragged.style.marginLeft = "26px"
 							drawScene();
 						}
 					});
@@ -396,6 +426,7 @@ function update() {
 		function drawScene() {
 			MYLIB.clear();
 			activeScene.draw();
+			drawScaleOverlay();
 		}
 
 		textArea.addEventListener('keydown', function(e) {
@@ -408,45 +439,292 @@ function update() {
 			}
 		});
 		
-		canvas.addEventListener('click', function(e) {
+		document.addEventListener('mousedown', function(e) {
+			mouseDown = true;
+		});
+		
+		document.addEventListener('mouseup', function(e) {
+			mouseDown = false;
+		});
+		
+		overlayCanvas.addEventListener('mousedown', function(e) {
 			//WORK ROTATION LATER
-			
-			//using e.offsetX and e.offsetY
-			var descendents = activeScene.getAllDescendents();
-			for (var i=0;i<descendents.length;i++) {
-				var dims = {x: descendents[i].x, y: descendents[i].y};
-				var parentDims = descendents[i].addParentProperties();
+			if (running === false && paused === false) {
+				var result = mouseOnOverlay(e.offsetX, e.offsetY);
 				
-				dims.x += parentDims.x;
-				dims.y += parentDims.y;
-				
-				if (descendents[i].constructor.name === "Rectangle") {
-					
-					if (e.offsetX >= dims.x && e.offsetY >= dims.y &&
-						e.offsetX <= dims.x + descendents[i].width &&
-						e.offsetY <= dims.y + descendents[i].height) {
-						selectedObject = descendents[i];
-						drawProperties();
-					}
-				}
-				if (descendents[i].constructor.name === "Circle") {
-					if (Math.hypot(Math.abs(e.offsetX - dims.x), Math.abs(e.offsetY - dims.y)) <= descendents[i].radius) {
-						selectedObject = descendents[i];
-						drawProperties();
-					}
+				switch(result) {
+					case true:
+						objectDragged = "object";
+						overlayCanvas.style.cursor = "-webkit-grabbing";
+						break;
+						
+					case false:
+						//using e.offsetX and e.offsetY
+						var descendents = activeScene.getAllDescendents();
+						for (var i=0;i<descendents.length;i++) {
+							var dims = {x: descendents[i].x, y: descendents[i].y};
+							var parentDims = descendents[i].addParentProperties();
+							
+							dims.x += parentDims.x;
+							dims.y += parentDims.y;
+							
+							if (descendents[i].constructor.name === "Rectangle") {
+								
+								if (e.offsetX >= dims.x && e.offsetY >= dims.y &&
+									e.offsetX <= dims.x + descendents[i].width &&
+									e.offsetY <= dims.y + descendents[i].height) {
+									
+									selectedObject = descendents[i];
+									objectDragged = "object";
+									drawProperties();
+									drawScaleOverlay();
+									overlayCanvas.style.cursor = "-webkit-grabbing";
+									document.getElementById("scriptSelect").value = 0;
+									scriptChange();
+								}
+							}
+							if (descendents[i].constructor.name === "Circle") {
+								if (Math.hypot(Math.abs(e.offsetX - dims.x), Math.abs(e.offsetY - dims.y)) <= descendents[i].radius) {
+									selectedObject = descendents[i];
+									objectDragged = "object";
+									drawProperties();
+									drawScaleOverlay();
+									overlayCanvas.style.cursor = "-webkit-grabbing";
+								}
+							}
+						}
+						break;
+						
+					default:
+						objectDragged = result;
+						break;
+
 				}
 			}
+			
+		});
+		
+		overlayCanvas.addEventListener('mouseup', function(e) {
+			objectDragged = "";
 		});
 		
 		function drawScaleOverlay() {
 			//using separate canvas for this
-			var overlayCanvas = document.getElementById("overlayCanvas");
-			var overlayCtx = overlayCanvas.getContext('2d');
 			
-			overlayCanvas.width = parseFloat(window.getComputedStyle(overlayCanvas).getPropertyValue('width'));
-			overlayCanvas.height = parseFloat(window.getComputedStyle(overlayCanvas).getPropertyValue('height'));
+			overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 			
-			//draw
+			//draw overlay
+			
+			squareSize = 7;
+			const POINT_OFFSET = 10;
+			
+			overlayCtx.save();
+			
+			var selectedDims = {x: selectedObject.x, y: selectedObject.y, rotation: selectedObject.rotation};
+			var parentDims = selectedObject.addParentProperties();
+			
+			selectedDims.x += parentDims.x;
+			selectedDims.y += parentDims.y;
+			selectedDims.rotation += parentDims.rotation;
+			
+			if (selectedObject.constructor.name === "Rectangle") {
+				selectedDims.width = selectedObject.width;
+				selectedDims.height = selectedObject.height;
+			} else if (selectedObject.constructor.name === "Circle") {
+				selectedDims.x -= selectedObject.radius;
+				selectedDims.y -= selectedObject.radius;
+				selectedDims.width = selectedObject.radius * 2;
+				selectedDims.height = selectedObject.radius * 2;
+			}
+			
+			overlayCtx.translate(selectedDims.x + selectedDims.width/2,
+				selectedDims.y + selectedDims.height/2);
+			
+			overlayCtx.rotate(selectedDims.rotation);
+			
+			var dims = {};
+			
+			dims.left = -selectedDims.width/2 -POINT_OFFSET;
+			dims.right = selectedDims.width/2 + POINT_OFFSET;
+			dims.top = -selectedDims.height/2 - POINT_OFFSET;
+			dims.bottom = selectedDims.height/2 + POINT_OFFSET;
+			
+			points = {};
+			//put these into points because then can be used later
+			points.topLeft = {x: dims.left, y: dims.top};
+			points.topCentre = {x: (dims.right-dims.left)/2 + dims.left, y: dims.top};
+			points.topRight = {x: dims.right, y: dims.top};
+			points.centreRight = {x: dims.right, y: (dims.top-dims.bottom)/2 - dims.top};
+			points.bottomRight = {x: dims.right, y: dims.bottom};
+			points.bottomCentre = {x: (dims.right-dims.left)/2 + dims.left, y: dims.bottom};
+			points.bottomLeft = {x: dims.left, y: dims.bottom};
+			points.centreLeft = {x: dims.left, y: (dims.top-dims.bottom)/2 - dims.top};
+
+			
+			overlayCtx.beginPath();
+			
+			for (var i in points) {
+				
+				overlayCtx.rect(points[i].x - squareSize/2, points[i].y - squareSize/2,
+					squareSize, squareSize);
+					
+			}
+			
+			overlayCtx.moveTo(points.topLeft.x, points.topLeft.y);
+			for (var i in points) {
+				overlayCtx.lineTo(points[i].x, points[i].y);
+			}
+			
+			
+			
+			overlayCtx.restore();
+			
+			overlayCtx.closePath();
+			overlayCtx.stroke();
+			
+			//useful later
+			pointsObject = {x: selectedDims.x, y: selectedDims.y, 
+				width: selectedDims.width, height: selectedDims.height, rotation: selectedDims.rotation};
+		}
+		
+		//doesn't work for rotation yet
+		overlayCanvas.addEventListener('mousemove', function(e) {
+			//again use offsetX and offsetY
+			//console.log(points);
+			var coordText = document.getElementById('coords');
+			coordText.innerHTML = "(x: " + e.offsetX + ", y: " + e.offsetY + ")";
+			
+			if (running === false && paused === false) {
+				var dimX;
+				var dimY;
+				
+				if (selectedObject.constructor.name === "Rectangle") {
+					dimX = "width";
+					dimY = "height";
+				}
+				if (selectedObject.constructor.name === "Circle") {
+					dimX = "radius";
+					dimY = "radius";
+				}
+				
+				switch(objectDragged) {
+					case "object":
+						selectedObject.x += e.movementX;
+						selectedObject.y += e.movementY;
+						break;
+						
+					case "topLeft":
+						var diff = Math.max(0, selectedObject[dimX] - e.movementX);
+						selectedObject.x -= diff - selectedObject[dimX];
+						selectedObject[dimX] = diff;
+						
+						diff = Math.max(0, selectedObject[dimY] - e.movementY);
+						selectedObject.y -= diff - selectedObject[dimY];
+						selectedObject[dimY] = diff;
+						break;
+						
+					case "topCentre":
+						var diff = Math.max(0, selectedObject[dimY] - e.movementY);
+						selectedObject.y -= diff - selectedObject[dimY];
+						selectedObject[dimY] = diff;
+						break;
+						
+					case "topRight":
+						selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
+						var diff = Math.max(0, selectedObject[dimY] - e.movementY);
+						selectedObject.y -= diff - selectedObject[dimY];
+						selectedObject[dimY] = diff;
+						break;
+						
+					case "centreLeft":
+						var diff = Math.max(0, selectedObject[dimX] - e.movementX);
+						selectedObject.x -= diff - selectedObject[dimX];
+						selectedObject[dimX] = diff;
+						
+						break;
+						
+					case "bottomLeft":
+						var diff = Math.max(0, selectedObject[dimX] - e.movementX);
+						selectedObject.x -= diff - selectedObject[dimX];
+						selectedObject[dimX] = diff;
+						
+						selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
+						break;
+						
+					case "bottomCentre":
+						selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
+						break;
+						
+					case "bottomRight":
+						selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
+						selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
+						break;
+					
+					case "centreRight":
+						selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
+						break;
+						
+					case "":
+						var result = mouseOnOverlay(e.offsetX, e.offsetY);
+						switch(result) {
+							case "topLeft":
+								overlayCanvas.style.cursor = "nw-resize";
+								break;
+							case "centreLeft":
+								overlayCanvas.style.cursor = "w-resize";
+								break;
+							case "bottomLeft":
+								overlayCanvas.style.cursor = "sw-resize";
+								break;
+							case "bottomCentre":
+								overlayCanvas.style.cursor = "s-resize";
+								break;
+							case "bottomRight":
+								overlayCanvas.style.cursor = "se-resize";
+								break;
+							case "centreRight":
+								overlayCanvas.style.cursor = "e-resize";
+								break;
+							case "topRight":
+								overlayCanvas.style.cursor = "ne-resize";
+								break;
+							case "topCentre":
+								overlayCanvas.style.cursor = "n-resize";
+								break;
+							case true:
+									//support for chrome
+									overlayCanvas.style.cursor = "-webkit-grab";
+									//overlayCanvas.style.cursor = "move";
+								break;
+							case false:
+								overlayCanvas.style.cursor = "auto";
+								break;
+						}
+						break;
+				}
+				drawScene();
+				drawProperties();
+			}
+		});
+		
+		function mouseOnOverlay(mouseX, mouseY) {
+			//checks if on a point
+			for (var i in points) {
+				if (mouseX >= points[i].x + pointsObject.width/2 + pointsObject.x - squareSize/2 && 
+					mouseX <= points[i].x + pointsObject.width/2 + pointsObject.x + squareSize - squareSize/2 &&
+					mouseY >= points[i].y + pointsObject.height/2 + pointsObject.y - squareSize/2 && 
+					mouseY <= points[i].y + pointsObject.height/2 + pointsObject.y + squareSize - squareSize/2) {
+						return i;
+				}
+			}
+			//checks if in rectangle
+			if (mouseX >= points.centreLeft.x + pointsObject.width/2 + pointsObject.x - squareSize/2 && 
+				mouseX <= points.centreRight.x + pointsObject.width/2 + pointsObject.x + squareSize - squareSize/2 &&
+				mouseY >= points.topCentre.y + pointsObject.height/2 + pointsObject.y - squareSize/2 && 
+				mouseY <= points.bottomCentre.y + pointsObject.height/2 + pointsObject.y + squareSize - squareSize/2) {
+					return true;
+			}
+			return false;
 		}
 	
 		/*
@@ -499,14 +777,46 @@ function update() {
 		}
 		
 		function play() {
-			MYLIB.run(scene);
+			overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+			MYLIB.context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+			MYLIB.run(scene.clone());
+			running = true;
+		}
+		
+		function pause() {
+			MYLIB.pause();
+			paused = true;
+			running = false;
+		}
+		
+		function stop() {
+			MYLIB.stop();
+			paused = false;
+			running = false;
+			drawScene();
 		}
 		
 		function updateCode() {
-			console.log(textArea.value);
-			selectedObject.updateScript(0, textArea.value);
+			//change number for index of script
+			var value = document.getElementById("scriptSelect").value;
+			selectedObject.updateScript(value, textArea.value);
 		}
 		
+		function addScriptOption(script) {
+			var temp = document.createElement("OPTION");
+			temp.value = script.index;
+			temp.innerHTML = script.name;
+			document.getElementById("scriptSelect").appendChild(temp);
+		}
+		
+		function scriptChange() {
+			var value = document.getElementById("scriptSelect").value;
+			if (selectedObject.scripts[value] !== undefined) {
+				textArea.value = selectedObject.scripts[value].code;
+			} else {
+			
+			}
+		}
 		
 	</script>
 	

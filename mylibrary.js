@@ -21,16 +21,19 @@ var MYLIB = {};
 	
 	var objects = [];
 	
+	var paused = false;
+	var running = false;
+	
 	//only run setup once stuff is finished 
 	if (document.readyState === 'complete') {
 		if (MYLIB.runSpontaneously === true) {
-			setup();
+			run();
 		}
 	} else {
 		//window.addEventListener('load', thisStart);
 		document.addEventListener('DOMContentLoaded', function() {
 			if (MYLIB.runSpontaneously === true) {
-				setup();
+				run();
 			}
 		});
 	}
@@ -39,7 +42,6 @@ var MYLIB = {};
 		//createCanvas();
 		
 		//parse all scripts
-		console.log(MYLIB.runSpontaneously);
 		if (scene !== undefined) {
 			for (var i=0;i<scene.scripts.length;i++) {
 				parseScript(scene.scripts[i], scene);
@@ -69,7 +71,26 @@ var MYLIB = {};
 	}
 
 	function run(scene) {
-		setup(scene);
+		console.log(scene);
+		running = true;
+		if (paused === true) {
+			paused = false;
+			animate();
+		} else {
+			setup(scene);
+		}
+	}
+	
+	function pause() {
+		paused = true;
+		running = false;
+	}
+	
+	function stop() {
+		paused = false;
+		running = false;
+		startFunctions = [];
+		updateFunctions = [];
 	}
 	
 	function createCanvas(width=window.innerWidth, height=window.innerHeight) {
@@ -113,7 +134,9 @@ var MYLIB = {};
 		for (var i=0;i<updateFunctions.length;i++) {
 			updateFunctions[i]();
 		}
-		requestAnimationFrame(animate);
+		if (paused === false && running === true) {
+			requestAnimationFrame(animate);
+		}
 	}
 	
 	
@@ -122,13 +145,15 @@ var MYLIB = {};
 	**CLASSES
 	*/
 
-	class Object {
+	class BaseObject {
 		constructor(x, y) {
 			this.x = x;
 			this.y = y;
 			this.rotation = 0;
 			
 			this.name = this.constructor.name;
+			
+			this.isBaseObject = true;
 			
 			this.parent = null;
 			this.children = [];
@@ -162,6 +187,44 @@ var MYLIB = {};
 			}
 		}
 		
+		clone() {
+			var copy;
+
+			copy = new this.constructor();
+			
+			copy.name = this.name;
+			copy.parent = this.parent;
+			copy.rotation = this.rotation;
+			copy.scripts = this.scripts;
+			copy.x = this.x;
+			copy.y = this.y;
+			if (this.isRectangle === true) {
+				copy.width = this.width;
+				copy.height = this.height;
+			}
+			if (this.isCircle === true) {
+				copy.radius = this.radius;
+			}
+			
+			if (this.isShape === true) {
+				copy.visible = this.visible;
+				copy.fill = this.fill;
+				copy.fillColour = this.fillColour;
+				copy.stroke = this.stroke;
+				copy.strokeColour = this.strokeColour;
+				copy.strokeSize = this.strokeSize;
+				copy.opacity = this.opacity;
+			}
+
+			for (var i=0;i<this.children.length;i++) {
+				copy.add(this.children[i].clone());
+			}
+
+			
+			//return Object.assign({}, this);
+			return copy;
+		}
+		
 		getAllDescendents() {
 			var array = [];
 			
@@ -169,11 +232,11 @@ var MYLIB = {};
 				getDirectDescendents(this.children[i]);
 			}
 			
-			function getDirectDescendents(object) {
-				array.push(object);
+			function getDirectDescendents(obj) {
+				array.push(obj);
 				
-				for (var i=0;i<object.children.length;i++) {
-					getDirectDescendents(object.children[i]);
+				for (var i=0;i<obj.children.length;i++) {
+					getDirectDescendents(obj.children[i]);
 				}
 				
 			}
@@ -228,7 +291,7 @@ var MYLIB = {};
 		}
 	}
 
-	class Shape extends Object {
+	class Shape extends BaseObject {
 		constructor(x, y) {
 			super(x, y);
 			this.visible = true;
@@ -238,6 +301,8 @@ var MYLIB = {};
 			this.strokeColour = "black";
 			this.strokeSize = 1;
 			this.opacity = 1;
+			
+			this.isShape = true;
 		}
 	}
 
@@ -246,6 +311,8 @@ var MYLIB = {};
 			super(x, y);
 			this.width = width;
 			this.height = height;
+			
+			this.isRectangle = true;
 		}
 		draw() {
 			//rotateContext(this.rotation);
@@ -295,6 +362,8 @@ var MYLIB = {};
 		constructor(x=0, y=0, radius=20) {
 			super(x, y);
 			this.radius = radius;
+			
+			this.isCircle = true;
 		}
 		draw() {
 			if (this.visible === true) {
@@ -328,7 +397,7 @@ var MYLIB = {};
 	
 	//works but loads of cleanup to do around fixing not having parameters when called
 	//images will always draw but may draw out of order if not loaded
-	class _Image extends Object {
+	class _Image extends BaseObject {
 		constructor(url, x, y, width, height) {
 			super(x, y);
 			var img = new Image(x, y);
@@ -349,6 +418,8 @@ var MYLIB = {};
 			this.image.addEventListener('load', function() {
 				self.loaded = true;
 			});
+			
+			this.isImage = true;
 		}
 		
 		draw() {
@@ -375,7 +446,10 @@ var MYLIB = {};
 		constructor(code, object, name="script" + (parseInt(object.scripts.length) + 1)) {
 			this.code = code;
 			this.name = name;
+			this.index = parseInt(object.scripts.length);
 			object.scripts.push(this);
+			
+			this.isScript = true;
 		}
 		
 	}
@@ -394,9 +468,11 @@ var MYLIB = {};
 		});
 	}
 	
-	class Scene extends Object {
+	class Scene extends BaseObject {
 		constructor(x=0, y=0) {
 			super(x, y);
+			
+			this.isScene = true;
 		}
 		
 		draw() {
@@ -431,7 +507,7 @@ var MYLIB = {};
 	}
 	
 	MYLIB.runSpontaneously = runSpontaneously;
-	MYLIB.Object = Object;
+	MYLIB.BaseObject = BaseObject;
 	MYLIB.Shape = Shape;
 	MYLIB.Rectangle = Rectangle;
 	MYLIB.Circle = Circle;
@@ -441,4 +517,6 @@ var MYLIB = {};
 	MYLIB.setCanvas = setCanvas;
 	MYLIB.clear = clear;
 	MYLIB.run = run;
+	MYLIB.pause = pause;
+	MYLIB.stop = stop;
 }).call();
