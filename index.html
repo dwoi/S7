@@ -65,6 +65,7 @@
 				<button onclick="increaseFontSize()" class="textButtons" id="increaseSizeButton">Size +</button>
 				<button onclick="decreaseFontSize()" class="textButtons" id="decreaseSizeButton">Size -</button>
 				<select onchange="scriptChange()" id="scriptSelect"></select>
+				<button onclick="createScript()" class="textButtons" id="addScriptButton">New script</button>
 			</div>
 		</div>
 	</div>
@@ -335,9 +336,7 @@
 					});
 					
 					DOMElement.addEventListener("click", function(e) {
-						selectedObject = e.target.object;
-						drawProperties();
-						drawScaleOverlay();
+						selectObject(e.target.object);
 					});
 					
 					DOMElement.addEventListener("dragstart", function(e) {
@@ -400,6 +399,26 @@
 		
 		//END OF SCENE OVERVIEW
 		
+		function selectObject(object) {
+			selectedObject = object;
+			
+			drawProperties();
+			drawScaleOverlay();
+			
+			var scriptElement = document.getElementById("scriptSelect");
+			scriptElement.value = 0;
+			
+			//fix script
+			while (scriptElement.children.length>0) {
+				scriptElement.removeChild(scriptElement.children[0]);
+			}
+			
+			for(var i=0;i<selectedObject.scripts.length;i++) {
+				addScriptOption(selectedObject.scripts[i]);
+			}
+			scriptChange();
+		}
+		
 		function addObject(type) {
 			var temp = new MYLIB[type]();
 			activeScene.add(temp);
@@ -461,6 +480,7 @@
 					case false:
 						//using e.offsetX and e.offsetY
 						var descendents = activeScene.getAllDescendents();
+						var selectedSomething = false;
 						for (var i=0;i<descendents.length;i++) {
 							var dims = {x: descendents[i].x, y: descendents[i].y};
 							var parentDims = descendents[i].addParentProperties();
@@ -474,24 +494,23 @@
 									e.offsetX <= dims.x + descendents[i].width &&
 									e.offsetY <= dims.y + descendents[i].height) {
 									
-									selectedObject = descendents[i];
+									selectObject(descendents[i]);
 									objectDragged = "object";
-									drawProperties();
-									drawScaleOverlay();
 									overlayCanvas.style.cursor = "-webkit-grabbing";
-									document.getElementById("scriptSelect").value = 0;
-									scriptChange();
+									selectedSomething = true;
 								}
 							}
 							if (descendents[i].constructor.name === "Circle") {
 								if (Math.hypot(Math.abs(e.offsetX - dims.x), Math.abs(e.offsetY - dims.y)) <= descendents[i].radius) {
-									selectedObject = descendents[i];
+									selectObject(descendents[i]);
 									objectDragged = "object";
-									drawProperties();
-									drawScaleOverlay();
 									overlayCanvas.style.cursor = "-webkit-grabbing";
+									selectedSomething = true;
 								}
 							}
+						}
+						if (selectedSomething === false) {
+							selectObject(scene);
 						}
 						break;
 						
@@ -777,10 +796,12 @@
 		}
 		
 		function play() {
-			overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-			MYLIB.context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-			MYLIB.run(scene.clone());
-			running = true;
+			if (running === false) {
+				overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+				MYLIB.context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+				MYLIB.run(scene.clone());
+				running = true;
+			}
 		}
 		
 		function pause() {
@@ -802,6 +823,12 @@
 			selectedObject.updateScript(value, textArea.value);
 		}
 		
+		function createScript() {
+			textArea.value = "";//default script
+			selectedObject.addScript(textArea.value);
+			addScriptOption(selectedObject.scripts[selectedObject.scripts.length - 1]);
+		}
+		
 		function addScriptOption(script) {
 			var temp = document.createElement("OPTION");
 			temp.value = script.index;
@@ -814,7 +841,7 @@
 			if (selectedObject.scripts[value] !== undefined) {
 				textArea.value = selectedObject.scripts[value].code;
 			} else {
-			
+				textArea.value = "This object has no scripts";
 			}
 		}
 		

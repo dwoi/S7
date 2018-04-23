@@ -71,7 +71,6 @@ var MYLIB = {};
 	}
 
 	function run(scene) {
-		console.log(scene);
 		running = true;
 		if (paused === true) {
 			paused = false;
@@ -121,7 +120,7 @@ var MYLIB = {};
 	function parseScript(script, object) {
 		//run through code and add functions
 		console.log(script);
-		var functions = (new Function("var start, update;" + script.code + 'return {start: start, update: update};//# sourceURL=' + script.name))();
+		var functions = (new Function("var start, update;" + script.code + ';return {start: start, update: update};//# sourceURL=' + script.name))();
 		if (functions.start !== undefined) {
 			startFunctions.push(functions.start.bind(object));
 		}
@@ -255,11 +254,13 @@ var MYLIB = {};
 			function startProp(prop) {
 				var finalProp = 0;
 				
-				addProp(self);
+				if (self.parent !== undefined && self.parent !== null) {
+					addProp(self);
+				}
 				
 				function addProp(obj) {
 					
-					finalProp += obj.parent[prop]
+					finalProp += obj.parent[prop];
 					if (obj.parent.parent !== undefined && obj.parent.parent !== null) {
 						addProp(obj.parent);
 					}
