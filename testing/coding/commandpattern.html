@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	
+	<style>
+		body {
+			margin: 0;
+			border: 0;
+		}
+		
+		canvas {
+			display: block;
+		}
+
+	</style>
+</head>
+<body>
+	
+	<p id="c">Counter: 0</p>
+	
+	<button onclick="addToCounter()">ADD TO COUNTER</button>
+	<button onclick="add10ToCounter()">ADD 10 TO COUNTER</button>
+	<button onclick="undo()">undo</button>
+	<button onclick="redo()">redo</button>
+	
+
+	<script>
+	
+		"use strict";
+	
+		var counter = 0;
+		
+		class History {
+			constructor() {
+				this.undos = [];
+				this.history = [];
+			}
+			
+			undo() {
+				if (this.history.length>0) {
+					this.history[this.history.length-1].undo();
+					this.undos.push(this.history.pop());
+				}
+			}
+			
+			redo() {
+				if (this.undos.length>0) {
+					this.undos[this.undos.length-1].run();
+					this.history.push(this.undos.pop());
+				}
+			}
+			
+			run(command) {
+				command.run();
+				this.history.push(command);
+				this.redos = [];
+			}
+		}
+		
+		var myHistory = new History();
+		
+		class AddOneToCounter{
+			run() {counter++;updateCounter();};
+			undo() {counter--;updateCounter();};
+		}
+		
+		class AddTenToCounter {
+			run() {counter+=10;updateCounter();};
+			undo() {counter-=10;updateCounter();};
+		}
+		
+		function updateCounter() {
+			document.getElementById('c').innerHTML = "Counter: " + counter;
+		}
+		
+		function addToCounter() {
+			myHistory.run(new AddOneToCounter());
+		}
+		
+		function add10ToCounter() {
+			myHistory.run(new AddTenToCounter());
+		}
+		
+		function undo() {
+			myHistory.undo();
+		}
+		
+		function redo() {
+			myHistory.redo();
+		}
+		
+	</script>
+
+</body>
+</html>

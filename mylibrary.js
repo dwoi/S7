@@ -297,9 +297,9 @@ var MYLIB = {};
 			super(x, y);
 			this.visible = true;
 			this.fill = false;
-			this.fillColour = "#FFFFFF";
+			this.fillColour = "#FFFFFF";//white
 			this.stroke = true;
-			this.strokeColour = "#000000";
+			this.strokeColour = "#000000";//black
 			this.strokeSize = 1;
 			this.opacity = 1;
 			

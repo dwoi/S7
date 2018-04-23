@@ -72,6 +72,8 @@
 	
 	<script src="mylibrary.js"></script>
 	<script>
+	
+		"use script";
 		
 		//set up canvas
 		var canvas = document.getElementById('canvas');
@@ -96,10 +98,173 @@
 		
 		var objectDragged;
 		
+		var changedScene;
+		
+		var objectPosX;
+		var objectPosY;
+		
+		var objectSizeX;
+		var objectSizeY;
+		
 		var mouseDown = false;
 		
 		var running = false;
 		var paused = false;
+		
+		//Command Pattern system
+		
+		class History {
+			constructor() {
+				this.undos = [];
+				this.history = [];
+			}
+			
+			undo() {
+				if (this.history.length>0) {
+					this.history[this.history.length-1].undo();
+					this.undos.push(this.history.pop());
+				}
+			}
+			
+			redo() {
+				if (this.undos.length>0) {
+					this.undos[this.undos.length-1].run();
+					this.history.push(this.undos.pop());
+				}
+			}
+			
+			run(command) {
+				command.run();
+				this.history.push(command);
+				this.redos = [];
+			}
+			
+			add(command) {
+				this.history.push(command);
+				this.redos = [];
+			}
+		}
+		
+		class ChangePositionCommand {
+			constructor(object, origPosX, origPosY, newPosX, newPosY) {
+				this.object = object;
+				this.origPosX = origPosX;
+				this.origPosY = origPosY;
+				this.newPosX = newPosX;
+				this.newPosY = newPosY;
+			}
+			
+			undo() {
+				console.log(this.object);
+				this.object.x = this.origPosX;
+				this.object.y = this.origPosY;
+				drawScene();
+				drawProperties();
+			}
+			
+			run() {
+				this.object.x = this.newPosX;
+				this.object.y = this.newPosY;
+				drawScene();
+				drawProperties();
+			}
+		}
+		
+		class ChangePropertyCommand {
+			constructor(object, property, origProp, newProp) {
+				this.object = object;
+				this.property = property;
+				this.origProp = origProp;
+				this.newProp = newProp;
+			}
+			
+			undo() {
+				console.log(this);
+				this.object[this.property] = this.origProp;
+				drawScene();
+				//drawProperties();
+			}
+			
+			run() {
+				this.object[this.property] = this.newProp;
+				drawScene();
+				//drawProperties();
+			}
+		}
+		
+		class ChangeHierachyCommand {
+			constructor(object, oldParent, newParent, element, oldParentEle, newParentEle) {
+				this.object = object;
+				this.oldParent = oldParent;
+				this.newParent = newParent;
+				this.element = element;
+				this.oldParentEle = oldParentEle;
+				this.newParentEle = newParentEle;
+			}
+			
+			run() {
+				this.newParent.add(this.object);
+				this.newParentEle.appendChild(this.element);
+				if (this.newParent.isScene === true) {
+					this.element.style.marginLeft = "0px";
+				} else {
+					this.element.style.marginLeft = "26px";
+				}
+				//drawSceneOverview();
+				drawScene();
+			}
+			
+			undo() {
+				this.oldParent.add(this.object);
+				this.oldParentEle.appendChild(this.element);
+				if (this.oldParent.isScene === true) {
+					this.element.style.marginLeft = "0px";
+				} else {
+					this.element.style.marginLeft = "26px";
+				}
+				//drawSceneOverview();
+				drawScene();
+			}
+		}
+		
+		class ChangeSizeCommand {
+			constructor(object, oldWidth, oldHeight, newWidth, newHeight, oldX, oldY, newX, newY) {
+				this.object = object;
+				console.log(object);
+				if (object.isRectangle === true) {
+					this.propertyX = "width";
+					this.propertyY = "height";
+				}
+				if (object.isCircle === true) {
+					this.propertyX = "radius";
+					this.propertyY = "radius";
+				}
+				this.oldWidth = oldWidth;
+				this.newWidth = newWidth;
+				this.oldHeight = oldHeight;
+				this.newHeight = newHeight;
+				this.oldX = oldX;
+				this.oldY = oldY;
+				this.newX = newX;
+				this.newY = newY;
+			}
+			
+			run() {
+				this.object[this.propertyX] = this.newWidth;
+				this.object[this.propertyY] = this.newHeight;
+				this.object.x = this.newX;
+				this.object.y = this.newY;
+				drawScene();
+			}
+			
+			undo() {
+				this.object[this.propertyX] = this.oldWidth;
+				this.object[this.propertyY] = this.oldHeight;
+				this.object.x = this.oldX;
+				this.object.y = this.oldY;
+				drawScene();
+			}
+		}
 		
 		MYLIB.setCanvas(canvas);
 		
@@ -139,6 +304,8 @@
 		rect2.add(rect3);
 		
 		var activeScene = scene;
+		
+		var _history = new History();
 		
 		drawScene();
 		
@@ -270,28 +437,36 @@
 			
 				case "number":
 					if (!isNaN(e.srcElement.value) && e.srcElement.value !== "") {
-						selectedObject[e.srcElement.property] = parseFloat(e.srcElement.value);
-						drawScene();
+						_history.run(new ChangePropertyCommand(selectedObject, e.srcElement.property,
+							selectedObject[e.srcElement.property], parseFloat(e.srcElement.value)));
+						//selectedObject[e.srcElement.property] = parseFloat(e.srcElement.value);
+						//drawScene();
 					}
 					break;
 					
 				case "boolean":
 					
 					//parse as boolean
-					selectedObject[e.srcElement.property] = e.srcElement.checked;
-					drawScene();
+					_history.run(new ChangePropertyCommand(selectedObject, e.srcElement.property, 
+						selectedObject[e.srcElement.property], e.srcElement.checked));
+					//selectedObject[e.srcElement.property] = e.srcElement.checked;
+					//drawScene();
 					break;
 				
 				case "colour":
-					selectedObject[e.srcElement.property] = e.srcElement.value;
-					drawScene();
+					_history.run(new ChangePropertyCommand(selectedObject, e.srcElement.property, 
+						selectedObject[e.srcElement.property], e.srcElement.value));
+					//selectedObject[e.srcElement.property] = e.srcElement.value;
+					//drawScene();
 					break;
 				
 				case "text":
-					selectedObject[e.srcElement.property] = e.srcElement.value;
-					drawScene();
+					_history.run(new ChangePropertyCommand(selectedObject, e.srcElement.property, 
+						selectedObject[e.srcElement.property], e.srcElement.value));
+					//selectedObject[e.srcElement.property] = e.srcElement.value;
+					//drawScene();
 					if (e.srcElement.property === "name") {
-						document.getElementById("propertiesTitle").innerHTML = "Properties for " + selectedObject.name;
+						updatePropertiesName();
 						drawSceneOverview();
 					}
 					break;
@@ -311,7 +486,7 @@
 			//do current scene first
 			var currScene = document.getElementById("currentScene");
 			
-			var changedScene = false;
+			
 			
 			//clear sceneoverview first
 			while (currScene.children.length>0) {
@@ -324,8 +499,11 @@
 				
 			currScene.addEventListener("drop", function(e) {
 				e.preventDefault();
+				
 				if (changedScene === false) {
-					elementDragged.parentElement.removeChild(elementDragged);
+					_history.run(new ChangeHierachyCommand(elementDragged.object, elementDragged.object.parent, 
+						activeScene, elementDragged, elementDragged.parentElement, currScene));
+					/*elementDragged.parentElement.removeChild(elementDragged);
 							
 					currScene.appendChild(elementDragged);
 					
@@ -333,7 +511,7 @@
 					
 					//elementDragged.insertAdjacentHTML("beforebegin", "&emsp;");
 					elementDragged.style.marginLeft = "0px"
-					drawScene();
+					drawScene();*/
 				}
 			});
 			
@@ -386,7 +564,9 @@
 						//prevent childing self and to child
 						if (elementDragged !== e.target && !isRelated(elementDragged, e.target)) {
 							//e.target.add(elementDragged);//fix this
-							elementDragged.parentElement.removeChild(elementDragged);
+							_history.run(new ChangeHierachyCommand(elementDragged.object, elementDragged.object.parent, 
+								e.target.object, elementDragged, elementDragged.parentElement, e.target));
+							/*elementDragged.parentElement.removeChild(elementDragged);
 							
 							e.target.appendChild(elementDragged);
 							
@@ -394,7 +574,7 @@
 							
 							//elementDragged.insertAdjacentHTML("beforebegin", "&emsp;");
 							elementDragged.style.marginLeft = "26px"
-							drawScene();
+							drawScene();*/
 						}
 					});
 					
@@ -481,12 +661,36 @@
 			}
 		});
 		
+		document.addEventListener('keydown', function(e) {
+			if (e.key === "z" && e.ctrlKey === true) {
+				_history.undo();
+			}
+			if (e.key === "y" && e.ctrlKey === true) {
+				_history.redo();
+			}
+		});
+		
 		document.addEventListener('mousedown', function(e) {
 			mouseDown = true;
 		});
 		
 		document.addEventListener('mouseup', function(e) {
 			mouseDown = false;
+			if (objectDragged === "object") {
+				_history.add(new ChangePositionCommand(selectedObject, objectPosX, objectPosY, selectedObject.x, selectedObject.y));
+			}
+			if (objectDragged !== true && objectDragged !== false) {
+				if (selectedObject.isRectangle === true) {
+					console.log(objectSizeX, objectSizeY);
+					_history.add(new ChangeSizeCommand(selectedObject, objectSizeX, objectSizeY, selectedObject.width, 
+						selectedObject.height, objectPosX, objectPosY, selectedObject.x, selectedObject.y));
+					
+				}
+				if (selectedObject.isCircle === true) {
+					_history.add(new ChangeSizeCommand(selectedObject, objectSizeX, objectSizeY, selectedObject.radius,
+						selectedObject.radius, objectPosX, objectPosY, selectedObject.x, selectedObject.y));
+				}
+			}
 			objectDragged = "";
 			if (overlayCanvas.style.cursor === "-webkit-grabbing") {
 				overlayCanvas.style.cursor = "-webkit-grab";
@@ -530,6 +734,8 @@
 									objectDragged = "object";
 									overlayCanvas.style.cursor = "-webkit-grabbing";
 									selectedSomething = true;
+									objectPosX = descendents[i].x;
+									objectPosY = descendents[i].y;
 								}
 							}
 							if (descendents[i].constructor.name === "Circle") {
@@ -538,6 +744,8 @@
 									objectDragged = "object";
 									overlayCanvas.style.cursor = "-webkit-grabbing";
 									selectedSomething = true;
+									objectPosX = descendents[i].x;
+									objectPosY = descendents[i].y;
 								}
 							}
 						}
@@ -548,6 +756,18 @@
 						
 					default:
 						objectDragged = result;
+						if (selectedObject.isRectangle === true) {
+							objectSizeX = selectedObject.width;
+							objectSizeY = selectedObject.height;
+							objectPosX = selectedObject.x;
+							objectPosY = selectedObject.y;
+						}
+						if (selectedObject.isCircle === true) {
+							objectSizeX = selectedObject.radius;
+							objectSizeY = selectedObject.radius;
+							objectPosX = selectedObject.x;
+							objectPosY = selectedObject.y;
+						}
 						break;
 
 				}
@@ -562,8 +782,14 @@
 			
 			//draw overlay
 			
+			var POINT_OFFSET = 10;
+			
+			if (selectedObject.stroke === true) {
+				POINT_OFFSET += selectedObject.strokeSize/2;
+			}
+			
 			squareSize = 7;
-			const POINT_OFFSET = 10;
+			
 			
 			overlayCtx.save();
 			
@@ -801,6 +1027,10 @@
 			}
 			return false;
 		}
+		
+		
+		
+		
 	
 		/*
 			Functions that change the layout of the page
@@ -896,8 +1126,10 @@
 			var value = document.getElementById("scriptSelect").value;
 			if (selectedObject.scripts[value] !== undefined) {
 				textArea.value = selectedObject.scripts[value].code;
+				textArea.readOnly = false;
 			} else {
 				textArea.value = "This object has no scripts";
+				textArea.readOnly = true;
 			}
 		}
 		
