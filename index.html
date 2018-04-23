@@ -106,11 +106,8 @@
 		MYLIB.runSpontaneously = false;
 		
 		var scene = new MYLIB.Scene();
-		scene.addScript(`function update() {
-							MYLIB.clear();
-							this.draw();
-						 }
-		`, 'default');//default code to be run in the scene
+		scene.addScript(`function update() {\n    MYLIB.clear();\n    this.draw();\n}`,
+			'default');//default code to be run in the scene
 		
 		
 		
@@ -121,7 +118,7 @@
 		
 		rect2.name = "fireRect";
 		rect2.fill = true;
-		rect2.fillColour = "red";
+		rect2.fillColour = "#FF0000";
 		
 		var rect = new MYLIB.Rectangle(30, 300, 100, 50);
 		rect.rotation = 1;
@@ -132,8 +129,6 @@
 		rect.addScript(`function start() {\n    this.fill = true;\n    this.fillColour = "green";\n}`);
 		addScriptOption(rect.scripts[1]);
 		//add that script
-		
-		
 		
 		var selectedObject = rect;
 		
@@ -195,17 +190,46 @@
 						//work out what input is necessary
 						
 						let myinput = document.createElement("INPUT");
-						myinput.type = 'text';
+						
 						
 						myinput.className = "properties";
 						
 						myinput.property = Columns[j][i][0];
 						myinput.propertyType = Columns[j][i][2];
 						
-						myinput.setAttribute("value", selectedObject[Columns[j][i][0]]);
+						if (myinput.propertyType === "number" || myinput.propertyType === "text") {
+							myinput.type = 'text';
 						
-						myinput.style.textAlign = "center";
-						myinput.setAttribute("size", Columns[j][i][1]);
+							myinput.setAttribute("value", selectedObject[Columns[j][i][0]]);
+							
+							myinput.style.textAlign = "center";
+							myinput.setAttribute("size", Columns[j][i][1]);
+							
+							myinput.addEventListener('input', updateProperties);
+						}
+						
+						if (myinput.propertyType === "colour") {
+							myinput.type = 'color';
+							myinput.setAttribute("value", selectedObject[Columns[j][i][0]]);
+							//myinput.setAttribute("value", "#FF0000");
+							
+							myinput.addEventListener('input', updateProperties);
+						}
+						
+						if (myinput.propertyType === "boolean") {
+							myinput.type = 'checkbox';
+							
+							if (selectedObject[Columns[j][i][0]] === true) {
+								myinput.checked = true;
+							}
+							//myinput.setAttribute("value", selectedObject[Columns[j][i][0]]);
+							
+							myinput.addEventListener('change', updateProperties);
+						}
+						
+						/*if (myinput.propertyType === "text") {
+						
+						}*/
 						
 						//can't use innerHTML directly on properties because it overwrites event listeners
 						let text = document.createElement("SPAN");
@@ -213,7 +237,7 @@
 						column.appendChild(text);
 						
 						column.appendChild(myinput);
-						myinput.addEventListener('input', updateProperties);
+						
 						//myinput.value = selectedObject[Column1[i]];
 						
 						
@@ -252,11 +276,10 @@
 					break;
 					
 				case "boolean":
-					if (e.srcElement.value === "true" || e.srcElement.value === "false") {
-						//parse as boolean
-						selectedObject[e.srcElement.property] = (e.srcElement.value == "true");
-						drawScene();
-					}
+					
+					//parse as boolean
+					selectedObject[e.srcElement.property] = e.srcElement.checked;
+					drawScene();
 					break;
 				
 				case "colour":
@@ -464,6 +487,15 @@
 		
 		document.addEventListener('mouseup', function(e) {
 			mouseDown = false;
+			objectDragged = "";
+			if (overlayCanvas.style.cursor === "-webkit-grabbing") {
+				overlayCanvas.style.cursor = "-webkit-grab";
+			}
+		});
+		
+		document.addEventListener('dragend', function(e) {
+			mouseDown = false;
+			objectDragged = "";
 		});
 		
 		overlayCanvas.addEventListener('mousedown', function(e) {
@@ -522,11 +554,7 @@
 			}
 			
 		});
-		
-		overlayCanvas.addEventListener('mouseup', function(e) {
-			objectDragged = "";
-		});
-		
+
 		function drawScaleOverlay() {
 			//using separate canvas for this
 			
@@ -609,10 +637,16 @@
 		//doesn't work for rotation yet
 		overlayCanvas.addEventListener('mousemove', function(e) {
 			//again use offsetX and offsetY
-			//console.log(points);
+			
+			if (window.getSelection) {
+				window.getSelection().removeAllRanges();
+			} else if (document.selection) {
+				document.selection.empty();
+			}
+			
 			var coordText = document.getElementById('coords');
 			coordText.innerHTML = "(x: " + e.offsetX + ", y: " + e.offsetY + ")";
-			
+			//console.log(e.movementX, e.movementY);
 			if (running === false && paused === false) {
 				var dimX;
 				var dimY;
@@ -630,6 +664,9 @@
 					case "object":
 						selectedObject.x += e.movementX;
 						selectedObject.y += e.movementY;
+						
+						drawScene();
+						drawProperties();
 						break;
 						
 					case "topLeft":
@@ -640,12 +677,17 @@
 						diff = Math.max(0, selectedObject[dimY] - e.movementY);
 						selectedObject.y -= diff - selectedObject[dimY];
 						selectedObject[dimY] = diff;
+						drawScene();
+						drawProperties();
 						break;
 						
 					case "topCentre":
 						var diff = Math.max(0, selectedObject[dimY] - e.movementY);
 						selectedObject.y -= diff - selectedObject[dimY];
 						selectedObject[dimY] = diff;
+						
+						drawScene();
+						drawProperties();
 						break;
 						
 					case "topRight":
@@ -653,12 +695,18 @@
 						var diff = Math.max(0, selectedObject[dimY] - e.movementY);
 						selectedObject.y -= diff - selectedObject[dimY];
 						selectedObject[dimY] = diff;
+						
+						drawScene();
+						drawProperties();
 						break;
 						
 					case "centreLeft":
 						var diff = Math.max(0, selectedObject[dimX] - e.movementX);
 						selectedObject.x -= diff - selectedObject[dimX];
 						selectedObject[dimX] = diff;
+						
+						drawScene();
+						drawProperties();
 						
 						break;
 						
@@ -668,19 +716,28 @@
 						selectedObject[dimX] = diff;
 						
 						selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
+						
+						drawScene();
+						drawProperties();
 						break;
 						
 					case "bottomCentre":
 						selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
+						drawScene();
+						drawProperties();
 						break;
 						
 					case "bottomRight":
 						selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
 						selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
+						drawScene();
+						drawProperties();
 						break;
 					
 					case "centreRight":
 						selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
+						drawScene();
+						drawProperties();	
 						break;
 						
 					case "":
@@ -721,8 +778,7 @@
 						}
 						break;
 				}
-				drawScene();
-				drawProperties();
+				
 			}
 		});
 		
