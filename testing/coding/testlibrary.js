@@ -14,34 +14,56 @@ var MYLIB = {};
 	var startFunctions = [];
 	var updateFunctions = [];
 	
+	//remember booleans are values not references
+	var runSpontaneously = true;
+	
 	//var functions = [];
 	
-	//var scripts = [];
+	var objects = [];
+	
+	var paused = false;
+	var running = false;
 	
 	//only run setup once stuff is finished 
-	/*if (document.readyState === 'complete') {
-		setup();
+	if (document.readyState === 'complete') {
+		if (MYLIB.runSpontaneously === true) {
+			run();
+		}
 	} else {
 		//window.addEventListener('load', thisStart);
-		document.addEventListener('DOMContentLoaded', setup);
-	}*/
+		document.addEventListener('DOMContentLoaded', function() {
+			if (MYLIB.runSpontaneously === true) {
+				run();
+			}
+		});
+	}
 	
 	function setup(scene) {
 		//createCanvas();
 		
 		//parse all scripts
-		for (var i=0;i<scene.scripts.length;i++) {
-			parseScript(scene.scripts[i], scene);
-		}
-		
-		var sceneChildren = scene.getAllDescendents();
-		for (var i=0;i<sceneChildren.length;i++) {
-			for (var j=0;j<sceneChildren[i].scripts.length;j++) {
-				console.log(i, j);
-				parseScript(sceneChildren[i].scripts[j], sceneChildren[i]);
+		if (scene !== undefined) {
+			for (var i=0;i<scene.scripts.length;i++) {
+				parseScript(scene.scripts[i], scene);
+			}
+			
+			var sceneChildren = scene.getAllDescendents();
+			for (var i=0;i<sceneChildren.length;i++) {
+				for (var j=0;j<sceneChildren[i].scripts.length;j++) {
+					console.log(i, j);
+					parseScript(sceneChildren[i].scripts[j], sceneChildren[i]);
+				}
+			}
+		//run through all objects
+		} else {
+			
+			for (var i=0;i<objects.length;i++) {
+				for (var j=0;j<objects[i].scripts.length;j++) {
+					parseScript(objects[i].scripts[j], objects[i]);
+				}
 			}
 		}
-
+		
 		for(var i=0;i<startFunctions.length;i++) {
 			startFunctions[i]();
 		}
@@ -49,7 +71,25 @@ var MYLIB = {};
 	}
 
 	function run(scene) {
-		setup(scene);
+		running = true;
+		if (paused === true) {
+			paused = false;
+			animate();
+		} else {
+			setup(scene);
+		}
+	}
+	
+	function pause() {
+		paused = true;
+		running = false;
+	}
+	
+	function stop() {
+		paused = false;
+		running = false;
+		startFunctions = [];
+		updateFunctions = [];
 	}
 	
 	function createCanvas(width=window.innerWidth, height=window.innerHeight) {
@@ -80,7 +120,7 @@ var MYLIB = {};
 	function parseScript(script, object) {
 		//run through code and add functions
 		console.log(script);
-		var functions = (new Function("var start, update;" + script.code + 'return {start: start, update: update};//# sourceURL=' + script.name))();
+		var functions = (new Function("var start, update;" + script.code + ';return {start: start, update: update};//# sourceURL=' + script.name))();
 		if (functions.start !== undefined) {
 			startFunctions.push(functions.start.bind(object));
 		}
@@ -93,14 +133,18 @@ var MYLIB = {};
 		for (var i=0;i<updateFunctions.length;i++) {
 			updateFunctions[i]();
 		}
-		requestAnimationFrame(animate);
+		if (paused === false && running === true) {
+			requestAnimationFrame(animate);
+		}
 	}
+	
+	
 	
 	/*
 	**CLASSES
 	*/
 
-	class Object {
+	class BaseObject {
 		constructor(x, y) {
 			this.x = x;
 			this.y = y;
@@ -108,9 +152,12 @@ var MYLIB = {};
 			
 			this.name = this.constructor.name;
 			
+			this.isBaseObject = true;
+			
 			this.parent = null;
 			this.children = [];
 			this.scripts = [];
+			objects.push(this);
 		}
 		
 		rotate(amount) {
@@ -139,6 +186,44 @@ var MYLIB = {};
 			}
 		}
 		
+		clone() {
+			var copy;
+
+			copy = new this.constructor();
+			
+			copy.name = this.name;
+			copy.parent = this.parent;
+			copy.rotation = this.rotation;
+			copy.scripts = this.scripts;
+			copy.x = this.x;
+			copy.y = this.y;
+			if (this.isRectangle === true) {
+				copy.width = this.width;
+				copy.height = this.height;
+			}
+			if (this.isCircle === true) {
+				copy.radius = this.radius;
+			}
+			
+			if (this.isShape === true) {
+				copy.visible = this.visible;
+				copy.fill = this.fill;
+				copy.fillColour = this.fillColour;
+				copy.stroke = this.stroke;
+				copy.strokeColour = this.strokeColour;
+				copy.strokeSize = this.strokeSize;
+				copy.opacity = this.opacity;
+			}
+
+			for (var i=0;i<this.children.length;i++) {
+				copy.add(this.children[i].clone());
+			}
+
+			
+			//return Object.assign({}, this);
+			return copy;
+		}
+		
 		getAllDescendents() {
 			var array = [];
 			
@@ -146,16 +231,45 @@ var MYLIB = {};
 				getDirectDescendents(this.children[i]);
 			}
 			
-			function getDirectDescendents(object) {
-				array.push(object);
+			function getDirectDescendents(obj) {
+				array.push(obj);
 				
-				for (var i=0;i<object.children.length;i++) {
-					getDirectDescendents(object.children[i]);
+				for (var i=0;i<obj.children.length;i++) {
+					getDirectDescendents(obj.children[i]);
 				}
 				
 			}
 			
 			return array;
+		}
+		
+		addParentProperties() {
+			//add x, y, and rotation to child objects
+			var self = this;
+			
+			var drawX = startProp("x");
+			var drawY = startProp("y");
+			var drawRot = startProp("rotation");
+			
+			function startProp(prop) {
+				var finalProp = 0;
+				
+				if (self.parent !== undefined && self.parent !== null) {
+					addProp(self);
+				}
+				
+				function addProp(obj) {
+					
+					finalProp += obj.parent[prop];
+					if (obj.parent.parent !== undefined && obj.parent.parent !== null) {
+						addProp(obj.parent);
+					}
+				}
+				return finalProp;
+			}
+			
+			
+			return {x: drawX, y: drawY, rotation: drawRot};
 		}
 		
 		addScript(code="", name) {
@@ -178,16 +292,18 @@ var MYLIB = {};
 		}
 	}
 
-	class Shape extends Object {
+	class Shape extends BaseObject {
 		constructor(x, y) {
 			super(x, y);
 			this.visible = true;
 			this.fill = false;
-			this.fillColour = "white";
+			this.fillColour = "#FFFFFF";//white
 			this.stroke = true;
-			this.strokeColour = "black";
+			this.strokeColour = "#000000";//black
 			this.strokeSize = 1;
 			this.opacity = 1;
+			
+			this.isShape = true;
 		}
 	}
 
@@ -196,22 +312,27 @@ var MYLIB = {};
 			super(x, y);
 			this.width = width;
 			this.height = height;
+			
+			this.isRectangle = true;
 		}
 		draw() {
 			//rotateContext(this.rotation);
 			if (this.visible === true) {
-				var drawX = this.x;
-				var drawY = this.y;
+				var parentProperties = this.addParentProperties();
+				
+				var drawX = this.x + parentProperties.x;
+				var drawY = this.y + parentProperties.y;
+				var drawRot = this.rotation + parentProperties.rotation;
 				
 				if (Number.isInteger(drawX)) {
-					drawY += 0.5;
+					drawX += 0.5;
 				}
 				if (Number.isInteger(drawY)) {
 					drawY += 0.5;
 				}
 				context.save();
 				context.translate(drawX + this.width/2, drawY + this.height/2);
-				context.rotate(this.rotation);
+				context.rotate(drawRot);
 				
 				context.globalAlpha = this.opacity;
 				
@@ -242,14 +363,25 @@ var MYLIB = {};
 		constructor(x=0, y=0, radius=20) {
 			super(x, y);
 			this.radius = radius;
+			
+			this.isCircle = true;
 		}
 		draw() {
 			if (this.visible === true) {
+				
+				var parentProperties = this.addParentProperties();
+				
+				var drawX = this.x + parentProperties.x;
+				var drawY = this.y + parentProperties.y;
+				var drawRot = this.rotation + parentProperties.rotation;
+				//rotate circle????
+				
 				context.beginPath();
-				context.arc(this.x, this.y, this.radius, 0, 2*Math.PI);
+				context.arc(drawX, drawY, this.radius, 0, 2*Math.PI);
 				
 				if (this.stroke === true) {
 					context.strokeStyle = this.strokeColour;
+					context.lineWidth = this.strokeSize;
 					context.stroke();
 				}
 				
@@ -264,9 +396,60 @@ var MYLIB = {};
 		}
 	}
 	
+	class Text extends Shape {
+		constructor(string="", x=0, y=0) {
+			super(x, y);
+			this.string = string;
+			this.x = x;
+			this.y = y;
+			this.fontSize = 24;
+			this.font = "Arial";
+		}
+		
+		draw() {
+			if (this.visible === true) {
+				
+				var parentProperties = this.addParentProperties();
+				
+				var drawX = this.x + parentProperties.x;
+				var drawY = this.y + parentProperties.y;
+				var drawRot = this.rotation + parentProperties.rotation;
+				
+				context.save();
+				context.translate(drawX + this.width/2, drawY + this.height/2);
+				context.rotate(drawRot);
+				
+				context.globalAlpha = this.opacity;
+				
+				context.font = this.fontSize + "px " + this.font;
+				
+				if (this.stroke === true) {
+					context.strokeStyle = this.strokeColour;
+					context.lineWidth = this.strokeSize;
+					context.strokeText(this.string, drawX, drawY);
+				}
+				
+				if (this.fill === true) {
+					context.fillStyle = this.fillColour;
+					context.fillText(this.string, drawX, drawY);
+				}
+				
+				context.restore();
+				
+				context.globalAlpha = 1;
+			}
+		}
+		
+		getWidth() {
+			context.font = this.fontSize + "px " + this.font;
+			return context.measureText(this.string).width;
+		}
+		
+	}
+	
 	//works but loads of cleanup to do around fixing not having parameters when called
 	//images will always draw but may draw out of order if not loaded
-	class _Image extends Object {
+	class _Image extends BaseObject {
 		constructor(url, x, y, width, height) {
 			super(x, y);
 			var img = new Image(x, y);
@@ -287,6 +470,8 @@ var MYLIB = {};
 			this.image.addEventListener('load', function() {
 				self.loaded = true;
 			});
+			
+			this.isImage = true;
 		}
 		
 		draw() {
@@ -313,7 +498,10 @@ var MYLIB = {};
 		constructor(code, object, name="script" + (parseInt(object.scripts.length) + 1)) {
 			this.code = code;
 			this.name = name;
+			this.index = parseInt(object.scripts.length);
 			object.scripts.push(this);
+			
+			this.isScript = true;
 		}
 		
 	}
@@ -332,9 +520,11 @@ var MYLIB = {};
 		});
 	}
 	
-	class Scene extends Object {
-		constructor() {
-			super();
+	class Scene extends BaseObject {
+		constructor(x=0, y=0) {
+			super(x, y);
+			
+			this.isScene = true;
 		}
 		
 		draw() {
@@ -368,14 +558,18 @@ var MYLIB = {};
 		context.closePath();
 	}
 	
-	MYLIB.Object = Object;
+	MYLIB.runSpontaneously = runSpontaneously;
+	MYLIB.BaseObject = BaseObject;
 	MYLIB.Shape = Shape;
 	MYLIB.Rectangle = Rectangle;
 	MYLIB.Circle = Circle;
 	MYLIB.Scene = Scene;
+	MYLIB.Text = Text;
 	MYLIB.Image = _Image;
 	MYLIB.createCanvas = createCanvas;
 	MYLIB.setCanvas = setCanvas;
 	MYLIB.clear = clear;
 	MYLIB.run = run;
+	MYLIB.pause = pause;
+	MYLIB.stop = stop;
 }).call();

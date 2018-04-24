@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	
+	<style>
+
+	</style>
+</head>
+<body>
+
+	<script src="testlibrary.js"></script>
+	<script>
+	
+		"use strict";
+		
+		MYLIB.createCanvas();
+		
+		var test = new MYLIB.Text("Hello World!", 100, 50);
+		test.fontSize = 40;
+		
+		var test2 = new MYLIB.Text("Width = " + test.getWidth(), 100, 100);
+		test2.fontSize = 40;
+		test.fill = true;
+		test.fillColour = "#00AADD";
+		test.stroke = false;
+		
+		test2.fill = true;
+		test2.fillColour = "#AADD00";
+		test2.stroke = false;
+		
+		var scene = new MYLIB.Scene();
+		scene.add(test, test2);
+		
+		scene.draw();
+		
+	</script>
+
+</body>
+</html>

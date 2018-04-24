@@ -38,6 +38,8 @@
 					<div id="dropdownAddButtons">
 						<button class="addObjectButton" id="addRect" onclick="addObject('Rectangle')">Add Rectangle</button>
 						<button class="addObjectButton" id="addCircle" onclick="addObject('Circle')">Add Circle</button>
+						<button class="addObjectButton" id="addText" onclick="addObject('Text')">Add Text</button>
+						
 					</div>
 				</span>
 				
@@ -155,7 +157,6 @@
 			}
 			
 			undo() {
-				console.log(this.object);
 				this.object.x = this.origPosX;
 				this.object.y = this.origPosY;
 				drawScene();
@@ -179,7 +180,6 @@
 			}
 			
 			undo() {
-				console.log(this);
 				this.object[this.property] = this.origProp;
 				drawScene();
 				//drawProperties();
@@ -238,6 +238,10 @@
 				if (object.isCircle === true) {
 					this.propertyX = "radius";
 					this.propertyY = "radius";
+				}
+				if (object.isText === true) {
+					this.propertyX = "fontSize";
+					this.propertyY = "fontSize";
 				}
 				this.oldWidth = oldWidth;
 				this.newWidth = newWidth;
@@ -303,6 +307,11 @@
 		rect3.name = "testRecto";
 		rect2.add(rect3);
 		
+		var text = new MYLIB.Text("Hello!", 500, 300);
+		text.fontSize = 40;
+		text.rotation = 0;
+		scene.add(text);
+		
 		var activeScene = scene;
 		
 		var _history = new History();
@@ -340,7 +349,8 @@
 			//later make this an object system with a name of property, size of box,
 			//type of property, max length of box, etc.
 			var Columns = [[["x", 1, "number"], ["y", 1, "number"], ["width", 1, "number"], 
-				["height", 1, "number"], ["radius", 1, "number"], ["rotation", 1, "number"]],
+				["height", 1, "number"], ["radius", 1, "number"], ["rotation", 1, "number"], ["string", 3, "text"],
+				["fontSize", 1, "number"]],
 				[["fill", 3, "boolean"], ["fillColour", 4, "colour"], ["stroke", 3, "boolean"], 
 				["strokeColour", 3, "colour"], ["strokeSize", 1, "number"]], [["visible", 3, "boolean"], 
 				["opacity", 2, "number"], ["name", 10, "text"]]];
@@ -625,9 +635,7 @@
 		function addObject(type) {
 			var temp = new MYLIB[type]();
 			activeScene.add(temp);
-			selectedObject = temp;
-			drawSceneOverview();
-			drawProperties();
+			selectObject(temp);
 			drawScene();
 		}
 		
@@ -681,7 +689,6 @@
 			}
 			if (objectDragged !== true && objectDragged !== false) {
 				if (selectedObject.isRectangle === true) {
-					console.log(objectSizeX, objectSizeY);
 					_history.add(new ChangeSizeCommand(selectedObject, objectSizeX, objectSizeY, selectedObject.width, 
 						selectedObject.height, objectPosX, objectPosY, selectedObject.x, selectedObject.y));
 					
@@ -724,11 +731,25 @@
 							dims.x += parentDims.x;
 							dims.y += parentDims.y;
 							
-							if (descendents[i].constructor.name === "Rectangle") {
+							if (descendents[i].isRectangle === true) {
 								
 								if (e.offsetX >= dims.x && e.offsetY >= dims.y &&
 									e.offsetX <= dims.x + descendents[i].width &&
 									e.offsetY <= dims.y + descendents[i].height) {
+									
+									selectObject(descendents[i]);
+									objectDragged = "object";
+									overlayCanvas.style.cursor = "-webkit-grabbing";
+									selectedSomething = true;
+									objectPosX = descendents[i].x;
+									objectPosY = descendents[i].y;
+								}
+							}
+							if (descendents[i].isText === true) {
+								
+								if (e.offsetX >= dims.x && e.offsetY >= dims.y &&
+									e.offsetX <= dims.x + descendents[i].getWidth() &&
+									e.offsetY <= dims.y + descendents[i].getHeight()) {
 									
 									selectObject(descendents[i]);
 									objectDragged = "object";
@@ -768,6 +789,12 @@
 							objectPosX = selectedObject.x;
 							objectPosY = selectedObject.y;
 						}
+						if (selectedObject.isText === true) {
+							objectSizeX = selectedObject.getWidth();
+							objectSizeY = selectedObject.getHeight();
+							objectPosX = selectedObject.x;
+							objectPosY = selectedObject.y;
+						}
 						break;
 
 				}
@@ -800,14 +827,19 @@
 			selectedDims.y += parentDims.y;
 			selectedDims.rotation += parentDims.rotation;
 			
-			if (selectedObject.constructor.name === "Rectangle") {
+			if (selectedObject.isRectangle === true) {
 				selectedDims.width = selectedObject.width;
 				selectedDims.height = selectedObject.height;
-			} else if (selectedObject.constructor.name === "Circle") {
+			}
+			if (selectedObject.isCircle === true) {
 				selectedDims.x -= selectedObject.radius;
 				selectedDims.y -= selectedObject.radius;
 				selectedDims.width = selectedObject.radius * 2;
 				selectedDims.height = selectedObject.radius * 2;
+			}
+			if (selectedObject.isText === true) {
+				selectedDims.width = selectedObject.getWidth();
+				selectedDims.height = selectedObject.getHeight();
 			}
 			
 			overlayCtx.translate(selectedDims.x + selectedDims.width/2,
@@ -877,13 +909,17 @@
 				var dimX;
 				var dimY;
 				
-				if (selectedObject.constructor.name === "Rectangle") {
+				if (selectedObject.isRectangle === true) {
 					dimX = "width";
 					dimY = "height";
 				}
-				if (selectedObject.constructor.name === "Circle") {
+				if (selectedObject.isCircle === true) {
 					dimX = "radius";
 					dimY = "radius";
+				}
+				if (selectedObject.isText === true) {
+					dimX = "fontSize";
+					dimY = "fontSize";
 				}
 				
 				switch(objectDragged) {
@@ -1113,6 +1149,7 @@
 			textArea.value = "";//default script
 			selectedObject.addScript(textArea.value);
 			addScriptOption(selectedObject.scripts[selectedObject.scripts.length - 1]);
+			textArea.readOnly = false;
 		}
 		
 		function addScriptOption(script) {

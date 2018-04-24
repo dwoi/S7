@@ -50,7 +50,6 @@ var MYLIB = {};
 			var sceneChildren = scene.getAllDescendents();
 			for (var i=0;i<sceneChildren.length;i++) {
 				for (var j=0;j<sceneChildren[i].scripts.length;j++) {
-					console.log(i, j);
 					parseScript(sceneChildren[i].scripts[j], sceneChildren[i]);
 				}
 			}
@@ -119,7 +118,6 @@ var MYLIB = {};
 	
 	function parseScript(script, object) {
 		//run through code and add functions
-		console.log(script);
 		var functions = (new Function("var start, update;" + script.code + ';return {start: start, update: update};//# sourceURL=' + script.name))();
 		if (functions.start !== undefined) {
 			startFunctions.push(functions.start.bind(object));
@@ -203,6 +201,11 @@ var MYLIB = {};
 			}
 			if (this.isCircle === true) {
 				copy.radius = this.radius;
+			}
+			if (this.isText === true) {
+				copy.fontSize = this.fontSize;
+				copy.string = this.string;
+				copy.font = this.font;
 			}
 			
 			if (this.isShape === true) {
@@ -396,6 +399,69 @@ var MYLIB = {};
 		}
 	}
 	
+	class Text extends Shape {
+		constructor(string="Text", x=0, y=0) {
+			super(x, y);
+			this.string = string;
+			this.x = x;
+			this.y = y;
+			this.fontSize = 24;
+			this.font = "Arial";
+			
+			//default text settings
+			this.stroke = false;
+			this.fill = true;
+			this.fillColour = "#000000";
+			
+			this.isText = true;
+		}
+		
+		draw() {
+			if (this.visible === true) {
+				
+				var parentProperties = this.addParentProperties();
+				
+				var drawX = this.x + parentProperties.x;
+				var drawY = this.y + parentProperties.y;
+				var drawRot = this.rotation + parentProperties.rotation;
+				
+				//make it so x, y corresponds to top left, not bottom left
+				var offsetY = this.getHeight();
+				
+				context.save();
+				context.translate(drawX + this.getWidth()/2, drawY + this.getHeight()/2);
+				context.rotate(drawRot);
+				
+				context.globalAlpha = this.opacity;
+				
+				context.font = this.fontSize + "px " + this.font;
+				
+				if (this.stroke === true) {
+					context.strokeStyle = this.strokeColour;
+					context.lineWidth = this.strokeSize;
+					context.strokeText(this.string, -this.getWidth()/2, -this.getHeight()/2 + offsetY);
+				}
+				
+				if (this.fill === true) {
+					context.fillStyle = this.fillColour;
+					context.fillText(this.string, -this.getWidth()/2, -this.getHeight()/2 + offsetY);
+				}
+				
+				context.restore();
+				
+				context.globalAlpha = 1;
+			}
+		}
+		
+		getWidth() {
+			context.font = this.fontSize + "px " + this.font;
+			return context.measureText(this.string).width;
+		}
+		getHeight() {
+			return this.fontSize;
+		}
+	}
+	
 	//works but loads of cleanup to do around fixing not having parameters when called
 	//images will always draw but may draw out of order if not loaded
 	class _Image extends BaseObject {
@@ -513,6 +579,7 @@ var MYLIB = {};
 	MYLIB.Rectangle = Rectangle;
 	MYLIB.Circle = Circle;
 	MYLIB.Scene = Scene;
+	MYLIB.Text = Text;
 	MYLIB.Image = _Image;
 	MYLIB.createCanvas = createCanvas;
 	MYLIB.setCanvas = setCanvas;
