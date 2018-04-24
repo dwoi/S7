@@ -41,6 +41,7 @@
 						<button class="addObjectButton" id="addText" onclick="addObject('Text')">Add Text</button>
 						
 					</div>
+					<button onclick="exportFile()" id="downloadButton">Export</button>
 				</span>
 				
 				<span id="toolbarCentreButtons">
@@ -75,7 +76,7 @@
 	<script src="mylibrary.js"></script>
 	<script>
 	
-		"use script";
+		//"use script";
 		
 		//set up canvas
 		var canvas = document.getElementById('canvas');
@@ -112,6 +113,8 @@
 		
 		var running = false;
 		var paused = false;
+		
+		var scenes = [];
 		
 		//Command Pattern system
 		
@@ -278,7 +281,7 @@
 		scene.addScript(`function update() {\n    MYLIB.clear();\n    this.draw();\n}`,
 			'default');//default code to be run in the scene
 		
-		
+		scenes.push(scene);
 		
 		var circ = new MYLIB.Circle(350, 100, 60);
 		scene.add(circ);
@@ -1064,10 +1067,82 @@
 			return false;
 		}
 		
+		/*
+		** EXPORTING/
+		** IMPORTING
+		*/
 		
+		function produceDocument() {
+			var document;
+			var j;
+			
+			document = "\<!DOCTYPE html\>\n";
+			document += "\<html\>\n";
+			document += "\<body\>\n";
+			document += "\<script src='mylibrary.js'\>" + "\</script\>\n";
+			document += "\<script\>\n";
+			
+			document += "MYLIB.createCanvas()\n";
+			
+			for (var i=0;i<scenes.length;i++) {
+				j=0;
+				addText(scenes[i]);
+			}
+			
+			document += "\</script\>\n";
+			document += "\</body\>\n";
+			document += "\</html\>\n";
+			
+			function addText(object) {
+				j++;
+				var name = object.constructor.name + i + j;
+				document += "var " + name + 
+					" = new MYLIB." + object.constructor.name + "();\n";
+				
+				//make sure only set necessary things
+				var base = new object.constructor();
+				for (var k in object) {
+					if (base[k] !== object[k]) {
+						if (k === "children") {
+							for (var l=0;l<object.children.length;l++) {
+								var tempName = addText(object.children[l]);
+								document += name + ".add(" + tempName + ");\n";
+							}
+						} else if (k === "scripts") {
+							for (var m=0;m<object.scripts.length;m++) {
+								document += name + ".addScript(`" + object.scripts[m].code + "`, \"" + object.scripts[m].name + "\");\n";
+							}
+						} else if (k !== "parent") {
+							if (typeof object[k] === "string") {
+								document += object.constructor.name + i + j + "." + k + " = \"" + object[k] + "\";\n";
+							} else {
+								document += object.constructor.name + i + j + "." + k + " = " + object[k] + ";\n";
+							}
+						}
+					}
+				}
+				return name;
+			}
+			return document;
+		}
 		
+		function exportFile() {
+			var content = produceDocument();
+			var fileName = "test.html";
+			
+			//download(fileName, content);
+			var element = document.createElement('a');
+			element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
+			element.setAttribute('download', fileName);
 		
-	
+			element.style.display = 'none';
+			document.body.appendChild(element);
+		
+			element.click();
+		
+			document.body.removeChild(element);
+		}
+		
 		/*
 			Functions that change the layout of the page
 		*/

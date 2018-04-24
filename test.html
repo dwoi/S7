@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script src='mylibrary.js'></script>
+<script>
+MYLIB.createCanvas()
+var Scene01 = new MYLIB.Scene();
+var Circle02 = new MYLIB.Circle();
+Circle02.x = 350;
+Circle02.y = 100;
+Circle02.radius = 60;
+Scene01.add(Circle02);
+var Rectangle03 = new MYLIB.Rectangle();
+Rectangle03.x = 30;
+Rectangle03.y = 300;
+Rectangle03.rotation = 1;
+Rectangle03.addScript(`function start() {
+    
+}
+
+function update() {
+    this.x += 1;
+}`, "script1");
+Rectangle03.addScript(`function start() {
+    this.fill = true;
+    this.fillColour = "green";
+}`, "script2");
+Rectangle03.width = 100;
+Rectangle03.height = 50;
+Scene01.add(Rectangle03);
+var Rectangle04 = new MYLIB.Rectangle();
+Rectangle04.x = 50;
+Rectangle04.y = 100;
+Rectangle04.name = "fireRect";
+var Rectangle05 = new MYLIB.Rectangle();
+Rectangle05.x = 10;
+Rectangle05.y = 10;
+Rectangle05.name = "testRecto";
+Rectangle05.width = 50;
+Rectangle04.add(Rectangle05);
+Rectangle05.fill = true;
+Rectangle05.fillColour = "#FF0000";
+Rectangle05.width = 100;
+Rectangle05.height = 50;
+Scene01.add(Rectangle04);
+var Text06 = new MYLIB.Text();
+Text06.x = 500;
+Text06.y = 300;
+Text06.string = "Hello!";
+Text06.fontSize = 40;
+Scene01.add(Text06);
+Scene01.addScript(`function update() {
+    MYLIB.clear();
+    this.draw();
+}`, "default");
+</script>
+</body>
+</html>
