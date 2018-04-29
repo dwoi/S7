@@ -55,7 +55,6 @@ var MYLIB = {};
 			}
 		//run through all objects
 		} else {
-			
 			for (var i=0;i<objects.length;i++) {
 				for (var j=0;j<objects[i].scripts.length;j++) {
 					parseScript(objects[i].scripts[j], objects[i]);
@@ -465,26 +464,26 @@ var MYLIB = {};
 	//works but loads of cleanup to do around fixing not having parameters when called
 	//images will always draw but may draw out of order if not loaded
 	class _Image extends BaseObject {
-		constructor(url, x, y, width, height) {
+		constructor(url="", x=0, y=0, width=50, height=50) {
 			super(x, y);
 			var img = new Image(x, y);
-			if (width !== undefined) {
-				img.width = width;
-				this.width = width;
-			}
-			if (height !== undefined) {
-				img.height = height;
-				this.height = height;
-			}
-			img.src = url;
 			
-			this.image = img;
-			this.loaded = false;
+			this.url = url;
 			
-			var self = this;
-			this.image.addEventListener('load', function() {
-				self.loaded = true;
-			});
+			this.width = img.width;
+			this.height = img.height;
+			
+			if (url !== undefined) {
+				img.src = url;
+			
+				this.image = img;
+				this.loaded = false;
+				
+				var self = this;
+				this.image.addEventListener('load', function() {
+					self.loaded = true;
+				});
+			}
 			
 			this.isImage = true;
 		}
@@ -502,9 +501,28 @@ var MYLIB = {};
 				} else {
 					context.drawImage(this.image, this.x, this.y, this.width, this.height);
 				}
-			} else {
+			}/* else {
 				imageLoad(this.image, this.x, this.y);
-			}
+			}*/
+		}
+		
+		setImage(url) {
+			
+			this.image = new Image();
+			
+			this.loaded = false;
+			
+			var self = this;
+			
+			this.image.addEventListener('load', function() {
+				//note this = this.image
+				self.loaded = true;
+				self.width = this.width;
+				self.height = this.height;
+			});
+			
+			this.image.src = url;
+			
 		}
 		
 	}
@@ -521,7 +539,7 @@ var MYLIB = {};
 		
 	}
 	
-	//draws image when it's loaded
+	/*//draws image when it's loaded
 	async function imageLoad(img, x, y, width, height) {
 		var result = await waitForImage(img);
 		context.drawImage(img, x, y, width, height);
@@ -533,7 +551,7 @@ var MYLIB = {};
 				resolve('loaded1');
 			});
 		});
-	}
+	}*/
 	
 	class Scene extends BaseObject {
 		constructor(x=0, y=0) {

@@ -21,10 +21,22 @@
 			<div id="projectOverview">
 				Project Overview
 			</div>
+			<div id="variableOverview">
+				<div id="variables">
+				
+				</div>
+				
+				<div id="addVariables">
+					<button onclick="addVariable()" id="addVariableButton">Add Variable</button>
+					<textarea placeholder="Variable Name" id="variableName" type="text"></textarea>
+				</div>
+			</div>
 			<div id="buttons">
 				<button id="sceneButton" onclick="showScene()">Scene Overview</button>
 				
 				<button id="projectButton" onclick="showProject()">Project Overview</button>
+				
+				<button id="variablesButton" onclick="showVariables()">Global Variables</button>
 			</div>
 		</div>
 	</div>
@@ -39,9 +51,12 @@
 						<button class="addObjectButton" id="addRect" onclick="addObject('Rectangle')">Add Rectangle</button>
 						<button class="addObjectButton" id="addCircle" onclick="addObject('Circle')">Add Circle</button>
 						<button class="addObjectButton" id="addText" onclick="addObject('Text')">Add Text</button>
+						<button class="addObjectButton" id="addImage" onclick="addObject('Image')">Add Image</button>
 						
 					</div>
-					<button onclick="exportFile()" id="downloadButton">Export</button>
+					<button onclick="exportFile()" id="exportButton">Export</button>
+					<label id="importUI" for="importButton">Import</label>
+					<input type="file" onchange="importFile()" id="importButton">
 				</span>
 				
 				<span id="toolbarCentreButtons">
@@ -70,6 +85,24 @@
 				<select onchange="scriptChange()" id="scriptSelect"></select>
 				<button onclick="createScript()" class="textButtons" id="addScriptButton">New script</button>
 			</div>
+		</div>
+	</div>
+	
+	<div id="menu">
+		<div id="imageBrowser">
+			
+		</div>
+		
+		<div id="importArea">
+			<label id="imageButton" for="importImageButton">Import Image</label>
+			<input type="file" onchange="importImage()" accept="image/*" id="importImageButton">
+			
+			<figure>
+				<img id="imagePreview" src="noimage.png" alt="image preview">
+				<figcaption>Image to be inserted</figcaption>
+			</figure>
+			
+			<button onclick="loadImage()" id="useImageButton">Use Image</button>
 		</div>
 	</div>
 	
@@ -114,7 +147,19 @@
 		var running = false;
 		var paused = false;
 		
+		var menuUp = false;
+		
 		var scenes = [];
+		
+		var globalVariables = [];
+		var variableTimeout;
+		
+		var menusDisabled = false;
+		
+		var selectedImage;
+		var previewImg = document.getElementById("imagePreview");
+		
+		var savedImages = [];
 		
 		//Command Pattern system
 		
@@ -233,7 +278,6 @@
 		class ChangeSizeCommand {
 			constructor(object, oldWidth, oldHeight, newWidth, newHeight, oldX, oldY, newX, newY) {
 				this.object = object;
-				console.log(object);
 				if (object.isRectangle === true) {
 					this.propertyX = "width";
 					this.propertyY = "height";
@@ -315,6 +359,10 @@
 		text.rotation = 0;
 		scene.add(text);
 		
+		var image = new MYLIB.Image();
+		scene.add(image);
+		selectedObject = image;
+		
 		var activeScene = scene;
 		
 		var _history = new History();
@@ -323,7 +371,7 @@
 		
 		//DEFINING PROPERTIES FOR EACH OBJECT
 		
-		var properties = document.getElementById('properties');
+		var propertiesElement = document.getElementById('properties');
 		
 		function drawProperties() {
 			
@@ -334,7 +382,7 @@
 			var currProperties = document.getElementsByClassName("propertyColumn");
 			var propLength = currProperties.length;
 			for (var i=0;i<propLength;i++) {
-				properties.removeChild(currProperties[0]);
+				propertiesElement.removeChild(currProperties[0]);
 			}
 			
 			//decide how many columns to have based on the selected object
@@ -345,53 +393,63 @@
 			
 			//column 2 is fill/stroke and visiblity colour stuff
 			
-			//column 3 is name and /misc
+			//column 3 is name and misc
 			
 			//[name of property, size]
 			
-			//later make this an object system with a name of property, size of box,
-			//type of property, max length of box, etc.
-			var Columns = [[["x", 1, "number"], ["y", 1, "number"], ["width", 1, "number"], 
-				["height", 1, "number"], ["radius", 1, "number"], ["rotation", 1, "number"], ["string", 3, "text"],
-				["fontSize", 1, "number"]],
-				[["fill", 3, "boolean"], ["fillColour", 4, "colour"], ["stroke", 3, "boolean"], 
-				["strokeColour", 3, "colour"], ["strokeSize", 1, "number"]], [["visible", 3, "boolean"], 
-				["opacity", 2, "number"], ["name", 10, "text"]]];
+			var properties = [];
 			
-			//"name", "visible", "fill", "fillColour", "stroke", "strokeColour",
+			class Property {
+				constructor(name, size, column, type, displayName) {
+					this.name = name;
+					this.size = size;
+					this.column = column;
+					this.type = type;
+					this.displayName = displayName;
+					properties.push(this);
+				}
+			}
+			
+			new Property("x", 1, 1, "number", "x"), new Property("y", 1, 1, "number", "y"),
+			new Property("width", 1, 1, "number", "width"), new Property("height", 1, 1, "number", "height"),
+			new Property("radius", 1, 1, "number", "radius"), new Property("rotation", 1, 1, "number", "rotation"),
+			new Property("string", 3, 1, "text", "string"), new Property("fontSize", 1, 1, "number", "Font Size"),
+			new Property("fill", 3, 2, "boolean", "fill"), new Property("fillColour", 4, 2, "colour", "Fill Colour"),
+			new Property("stroke", 3, 2, "boolean", "stroke"), new Property("strokeColour", 3, 2, "colour", "Stroke Colour"),
+			new Property("strokeSize", 1, 2, "number", "Stroke Size"), new Property("visible", 3, 3, "boolean", "visible"),
+			new Property("opacity", 2, 3, "number"), new Property("name", 10, 3, "text", "name");
+			new Property("url", 4, 2, "image", "url");
 			
 			for (var j=0;j<numOfColumns;j++) {
 				var column = document.createElement("DIV");
 				column.className = "propertyColumn";
 				column.style.width = 100 / numOfColumns + "%";
 				
-				for (var i=0;i<Columns[j].length;i++) {
-					if (selectedObject[Columns[j][i][0]] !== undefined) {
+				for (var i=0;i<properties.length;i++) {
+					if (selectedObject[properties[i].name] !== undefined && properties[i].column === j+1) {
 						//work out what input is necessary
 						
 						let myinput = document.createElement("INPUT");
 						
-						
 						myinput.className = "properties";
 						
-						myinput.property = Columns[j][i][0];
-						myinput.propertyType = Columns[j][i][2];
+						myinput.property = properties[i].name;
+						myinput.propertyType = properties[i].type;
 						
 						if (myinput.propertyType === "number" || myinput.propertyType === "text") {
 							myinput.type = 'text';
 						
-							myinput.setAttribute("value", selectedObject[Columns[j][i][0]]);
+							myinput.setAttribute("value", selectedObject[properties[i].name]);
 							
 							myinput.style.textAlign = "center";
-							myinput.setAttribute("size", Columns[j][i][1]);
+							myinput.setAttribute("size", properties[i].size);
 							
 							myinput.addEventListener('input', updateProperties);
 						}
 						
 						if (myinput.propertyType === "colour") {
 							myinput.type = 'color';
-							myinput.setAttribute("value", selectedObject[Columns[j][i][0]]);
-							//myinput.setAttribute("value", "#FF0000");
+							myinput.setAttribute("value", selectedObject[properties[i].name]);
 							
 							myinput.addEventListener('input', updateProperties);
 						}
@@ -399,44 +457,38 @@
 						if (myinput.propertyType === "boolean") {
 							myinput.type = 'checkbox';
 							
-							if (selectedObject[Columns[j][i][0]] === true) {
+							if (selectedObject[properties[i].name] === true) {
 								myinput.checked = true;
 							}
-							//myinput.setAttribute("value", selectedObject[Columns[j][i][0]]);
 							
 							myinput.addEventListener('change', updateProperties);
 						}
 						
-						/*if (myinput.propertyType === "text") {
-						
-						}*/
+						if (myinput.propertyType === "image") {
+							myinput.type = "button"
+							
+							if (selectedObject[properties[i].name] === "") {
+								myinput.value = "No Image";
+							} else {
+								myinput.value = selectedObject[properties[i].name];
+							}
+							myinput.addEventListener('click', chooseImage);
+							
+							myinput.style.padding = properties[i].size + "px";
+						}
 						
 						//can't use innerHTML directly on properties because it overwrites event listeners
 						let text = document.createElement("SPAN");
-						text.innerHTML += "<br>" + Columns[j][i][0] + ": ";
+						text.innerHTML += "<br>" + properties[i].name + ": ";
 						column.appendChild(text);
 						
 						column.appendChild(myinput);
 						
-						//myinput.value = selectedObject[Column1[i]];
-						
 						
 					}
 				}
-				properties.appendChild(column);
+				propertiesElement.appendChild(column);
 			}
-			
-			/*for (var i in selectedObject) {
-				for (var j=0;j<RectangleProperties.length;j++) {
-					if (RectangleProperties[j] === i) {
-						properties.innerHTML += "<br>" + i + ": " + selectedObject[i] + "";	
-					}
-				}
-			}
-			
-			if (selectedObject["x"] !== undefined) {
-				properties.innerHTML += "<br>x: " + selectedObject["x"] + "";	
-			}*/
 			
 		}
 		drawProperties();
@@ -542,7 +594,9 @@
 					DOMElement.draggable = true;
 					
 					DOMElement.addEventListener("mouseover", function(e) {
-						e.target.style.border = "dashed 1px black";
+						if (menusDisabled === false) {
+							e.target.style.border = "dashed 1px black";
+						}
 					});
 					
 					DOMElement.addEventListener("mouseout", function(e) {
@@ -550,16 +604,20 @@
 					});
 					
 					DOMElement.addEventListener("click", function(e) {
-						selectObject(e.target.object);
+						if (menusDisabled === false) {
+							selectObject(e.target.object);
+						}
 					});
 					
 					DOMElement.addEventListener("dragstart", function(e) {
-						elementDragged = e.target;
-						if (e.target.style.border !== "1px solid black") {
-							e.target.style.border = "double 1px black";
+						if (menusDisabled === false) {
+							elementDragged = e.target;
+							if (e.target.style.border !== "1px solid black") {
+								e.target.style.border = "double 1px black";
+							}
+							//console.log(e.target.innerHTML);
+							changedScene = false;
 						}
-						//console.log(e.target.innerHTML);
-						changedScene = false;
 					});
 					
 					DOMElement.addEventListener("dragover", function(e) {
@@ -613,7 +671,210 @@
 		}
 		drawSceneOverview();
 		
-		//END OF SCENE OVERVIEW
+		function drawVariableOverview() {
+			var variableElement = document.getElementById('variables');
+			
+			console.log(variableElement.children);
+			while (variableElement.children.length>0) {
+				variableElement.removeChild(variableElement.children[0]);
+			}
+			
+			for (var i=0;i<globalVariables.length;i++) {
+				var temp = document.createElement("INPUT");
+				temp.type = "text";
+				temp.value = globalVariables[i][0];
+				console.log(temp.value.length);
+				temp.style.width = temp.value.length * 20 + "px";
+				temp.style.border = "1px solid black";
+				
+				variableElement.appendChild(temp);
+				var equals = document.createElement("SPAN");
+				equals.innerHTML = "=";
+				equals.style.display = "inline-block";
+				variableElement.appendChild(equals);
+				
+				var valueElement = document.createElement("INPUT");
+				valueElement.style.display = "inline-block";
+				valueElement.style.border = "1px solid black";
+				
+				var maxWidth = parseFloat(window.getComputedStyle(variableElement).getPropertyValue('width'));
+				var equalsWidth = parseFloat(window.getComputedStyle(equals).getPropertyValue('width'));
+				console.log(maxWidth, equalsWidth);
+				valueElement.style.width = (maxWidth - temp.value.length * 20 - equalsWidth) + "px";
+				variableElement.appendChild(valueElement);
+				//console.log(temp, globalVariables);
+			}
+		}
+		
+		function addVariable() {
+			var variableArea = document.getElementById('variableName');
+			var variableName = variableArea.value
+			var regexTest = RegExp('^[0-9]|\\s');
+			
+			if (window[variableName] || regexTest.test(variableName)) {
+				
+				variableArea.className = "failAnimation";
+				if (variableTimeout) {
+					clearTimeout(variableTimeout);
+					
+					var area = document.createElement("TEXTAREA");
+					area.id = "variableName";
+					area.className = "failAnimation";
+					area.type = "text";
+					area.placeholder = "Variable Name";
+					area.value = variableName;
+					variableArea.id="";
+					var parentVarEle = document.getElementById('addVariables')
+					parentVarEle.removeChild(variableArea);
+					parentVarEle.appendChild(area);
+					variableArea = area;
+				}
+				
+				variableTimeout = setTimeout(function() {
+					variableArea.className = "";
+					variableTimeout = undefined;
+				}, 2000);
+				
+				
+			} else {
+				//variable passed test
+				globalVariables.push([variableName, ""]);
+				variableArea.value = "";
+				drawVariableOverview();
+			}
+		}
+		
+		function chooseImage(e) {
+			if (e.target.property === "url") {
+				drawImageMenu();
+			}
+		}
+		
+		function drawImageMenu() {
+			var menu = document.getElementById("menu");
+			menu.style.display = "block";
+			disableMenus();
+			drawBrowser();
+		}
+		
+		function loadImage() {
+			selectedObject.setImage(selectedImage[0]);
+			selectedObject.url = selectedImage[1];
+			var menu = document.getElementById("menu");
+			menu.style.display = "none";
+			enableMenus();
+			if (selectedObject.loaded === true) {
+				drawProperties();
+				drawScene();
+			} else {
+				selectedObject.image.onload = function() {
+					drawProperties();
+					drawScene();
+				}
+			}
+		}
+		
+		function importImage() {
+			var imageEle = document.getElementById("importImageButton");
+			
+			var filereader = new FileReader();
+			filereader.readAsDataURL(imageEle.files[0]);
+			filereader.onload = function() {
+				addImage(filereader.result, imageEle.files[0].name);
+				drawBrowser();
+			};
+		}
+		
+		function addImage(img, fileName) {
+			//img url, filename, index
+			savedImages.push([img, fileName, savedImages.length]);
+			selectedImage = savedImages[savedImages.length-1];
+			
+			previewImg.src = img;
+		}
+		
+		function drawBrowser() {
+			//each column is 128px across
+			
+			var browser = document.getElementById("imageBrowser");
+			
+			var maxWidth = parseFloat(window.getComputedStyle(browser).getPropertyValue('width'));
+			
+			
+			while(browser.children.length>0) {
+				browser.removeChild(browser.children[0]);
+			}
+			
+			var tempRow = document.createElement("DIV");
+			
+			var i=0;
+			
+			for (var j=0;j<savedImages.length;j++) {
+				//each box is 156 x 156
+				//image preview is 128 x 128
+				
+				//create rows as long as there are images to load
+				
+				if ((j+1-i) * 156 > maxWidth) {
+					console.log(i, j);
+					i+=j;
+					browser.appendChild(tempRow);
+					tempRow = document.createElement("DIV");
+				}
+				
+				var imageBox = document.createElement("FIGURE");
+				imageBox.className = "imageBox";
+				
+				
+				
+				var image = document.createElement("IMG");
+				image.className = "previewIcon";
+				image.src = savedImages[j][0];
+				image.fileName = savedImages[j][1];
+				image.index = j;
+				//image
+				
+				var caption = document.createElement("FIGCAPTION");
+				caption.innerHTML = image.fileName;
+				caption.className = "imageCaption";
+				
+				imageBox.appendChild(image);
+				imageBox.appendChild(caption);
+				tempRow.appendChild(imageBox);
+				
+				if (selectedImage) {
+					if (selectedImage[2] === j) {
+						imageBox.style.backgroundColor = "#0022FF";
+						imageBox.children[1].style.color = "#FFFFFF";
+					}
+				}
+				
+				imageBox.addEventListener("click", function(e) {
+					
+					//clear selectedImage first
+					
+					if (selectedImage) {
+						var index = selectedImage[2];
+						
+						var row = Math.floor(((index+1) * 156) / maxWidth);
+						var ele = ((((index+1) * 156) % maxWidth) / 156) - 1;
+						console.log(row, ele, index, browser);
+						var element = browser.children[row].children[ele];
+						element.style.backgroundColor = "#FFFFFF";
+						element.children[1].style.color = "#000000";
+					}
+					
+					this.style.backgroundColor = "#0022FF";
+					this.children[1].style.color = "#FFFFFF";
+					
+					selectedImage = savedImages[this.children[0].index];
+					
+					previewImg.src = selectedImage[0];
+				});
+				
+			}
+			browser.appendChild(tempRow);
+		}
 		
 		function selectObject(object) {
 			selectedObject = object;
@@ -640,6 +901,7 @@
 			activeScene.add(temp);
 			selectObject(temp);
 			drawScene();
+			drawSceneOverview();
 		}
 		
 		function isRelated(element, element2) {
@@ -714,7 +976,7 @@
 		
 		overlayCanvas.addEventListener('mousedown', function(e) {
 			//WORK ROTATION LATER
-			if (running === false && paused === false) {
+			if (menusDisabled === false) {
 				var result = mouseOnOverlay(e.offsetX, e.offsetY);
 				
 				switch(result) {
@@ -734,7 +996,7 @@
 							dims.x += parentDims.x;
 							dims.y += parentDims.y;
 							
-							if (descendents[i].isRectangle === true) {
+							if (descendents[i].isRectangle === true || descendents[i].isImage === true) {
 								
 								if (e.offsetX >= dims.x && e.offsetY >= dims.y &&
 									e.offsetX <= dims.x + descendents[i].width &&
@@ -762,7 +1024,7 @@
 									objectPosY = descendents[i].y;
 								}
 							}
-							if (descendents[i].constructor.name === "Circle") {
+							if (descendents[i].isCircle === true) {
 								if (Math.hypot(Math.abs(e.offsetX - dims.x), Math.abs(e.offsetY - dims.y)) <= descendents[i].radius) {
 									selectObject(descendents[i]);
 									objectDragged = "object";
@@ -780,7 +1042,7 @@
 						
 					default:
 						objectDragged = result;
-						if (selectedObject.isRectangle === true) {
+						if (selectedObject.isRectangle === true || selectedObject.isImage === true) {
 							objectSizeX = selectedObject.width;
 							objectSizeY = selectedObject.height;
 							objectPosX = selectedObject.x;
@@ -830,7 +1092,7 @@
 			selectedDims.y += parentDims.y;
 			selectedDims.rotation += parentDims.rotation;
 			
-			if (selectedObject.isRectangle === true) {
+			if (selectedObject.isRectangle === true || selectedObject.isImage === true) {
 				selectedDims.width = selectedObject.width;
 				selectedDims.height = selectedObject.height;
 			}
@@ -898,152 +1160,154 @@
 		//doesn't work for rotation yet
 		overlayCanvas.addEventListener('mousemove', function(e) {
 			//again use offsetX and offsetY
-			
-			if (window.getSelection) {
-				window.getSelection().removeAllRanges();
-			} else if (document.selection) {
-				document.selection.empty();
-			}
-			
-			var coordText = document.getElementById('coords');
-			coordText.innerHTML = "(x: " + e.offsetX + ", y: " + e.offsetY + ")";
-			//console.log(e.movementX, e.movementY);
-			if (running === false && paused === false) {
-				var dimX;
-				var dimY;
-				
-				if (selectedObject.isRectangle === true) {
-					dimX = "width";
-					dimY = "height";
-				}
-				if (selectedObject.isCircle === true) {
-					dimX = "radius";
-					dimY = "radius";
-				}
-				if (selectedObject.isText === true) {
-					dimX = "fontSize";
-					dimY = "fontSize";
+			if (menusDisabled === false) {
+				//remove selections so dragging isn't messed up
+				if (window.getSelection) {
+					window.getSelection().removeAllRanges();
+				} else if (document.selection) {
+					document.selection.empty();
 				}
 				
-				switch(objectDragged) {
-					case "object":
-						selectedObject.x += e.movementX;
-						selectedObject.y += e.movementY;
-						
-						drawScene();
-						drawProperties();
-						break;
-						
-					case "topLeft":
-						var diff = Math.max(0, selectedObject[dimX] - e.movementX);
-						selectedObject.x -= diff - selectedObject[dimX];
-						selectedObject[dimX] = diff;
-						
-						diff = Math.max(0, selectedObject[dimY] - e.movementY);
-						selectedObject.y -= diff - selectedObject[dimY];
-						selectedObject[dimY] = diff;
-						drawScene();
-						drawProperties();
-						break;
-						
-					case "topCentre":
-						var diff = Math.max(0, selectedObject[dimY] - e.movementY);
-						selectedObject.y -= diff - selectedObject[dimY];
-						selectedObject[dimY] = diff;
-						
-						drawScene();
-						drawProperties();
-						break;
-						
-					case "topRight":
-						selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
-						var diff = Math.max(0, selectedObject[dimY] - e.movementY);
-						selectedObject.y -= diff - selectedObject[dimY];
-						selectedObject[dimY] = diff;
-						
-						drawScene();
-						drawProperties();
-						break;
-						
-					case "centreLeft":
-						var diff = Math.max(0, selectedObject[dimX] - e.movementX);
-						selectedObject.x -= diff - selectedObject[dimX];
-						selectedObject[dimX] = diff;
-						
-						drawScene();
-						drawProperties();
-						
-						break;
-						
-					case "bottomLeft":
-						var diff = Math.max(0, selectedObject[dimX] - e.movementX);
-						selectedObject.x -= diff - selectedObject[dimX];
-						selectedObject[dimX] = diff;
-						
-						selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
-						
-						drawScene();
-						drawProperties();
-						break;
-						
-					case "bottomCentre":
-						selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
-						drawScene();
-						drawProperties();
-						break;
-						
-					case "bottomRight":
-						selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
-						selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
-						drawScene();
-						drawProperties();
-						break;
+				var coordText = document.getElementById('coords');
+				coordText.innerHTML = "(x: " + e.offsetX + ", y: " + e.offsetY + ")";
+				//console.log(e.movementX, e.movementY);
+				if (running === false && paused === false) {
+					var dimX;
+					var dimY;
 					
-					case "centreRight":
-						selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
-						drawScene();
-						drawProperties();	
-						break;
+					if (selectedObject.isRectangle === true || selectedObject.isImage === true) {
+						dimX = "width";
+						dimY = "height";
+					}
+					if (selectedObject.isCircle === true) {
+						dimX = "radius";
+						dimY = "radius";
+					}
+					if (selectedObject.isText === true) {
+						dimX = "fontSize";
+						dimY = "fontSize";
+					}
+					
+					switch(objectDragged) {
+						case "object":
+							selectedObject.x += e.movementX;
+							selectedObject.y += e.movementY;
+							
+							drawScene();
+							drawProperties();
+							break;
+							
+						case "topLeft":
+							var diff = Math.max(0, selectedObject[dimX] - e.movementX);
+							selectedObject.x -= diff - selectedObject[dimX];
+							selectedObject[dimX] = diff;
+							
+							diff = Math.max(0, selectedObject[dimY] - e.movementY);
+							selectedObject.y -= diff - selectedObject[dimY];
+							selectedObject[dimY] = diff;
+							drawScene();
+							drawProperties();
+							break;
+							
+						case "topCentre":
+							var diff = Math.max(0, selectedObject[dimY] - e.movementY);
+							selectedObject.y -= diff - selectedObject[dimY];
+							selectedObject[dimY] = diff;
+							
+							drawScene();
+							drawProperties();
+							break;
+							
+						case "topRight":
+							selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
+							var diff = Math.max(0, selectedObject[dimY] - e.movementY);
+							selectedObject.y -= diff - selectedObject[dimY];
+							selectedObject[dimY] = diff;
+							
+							drawScene();
+							drawProperties();
+							break;
+							
+						case "centreLeft":
+							var diff = Math.max(0, selectedObject[dimX] - e.movementX);
+							selectedObject.x -= diff - selectedObject[dimX];
+							selectedObject[dimX] = diff;
+							
+							drawScene();
+							drawProperties();
+							
+							break;
+							
+						case "bottomLeft":
+							var diff = Math.max(0, selectedObject[dimX] - e.movementX);
+							selectedObject.x -= diff - selectedObject[dimX];
+							selectedObject[dimX] = diff;
+							
+							selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
+							
+							drawScene();
+							drawProperties();
+							break;
+							
+						case "bottomCentre":
+							selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
+							drawScene();
+							drawProperties();
+							break;
+							
+						case "bottomRight":
+							selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
+							selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
+							drawScene();
+							drawProperties();
+							break;
 						
-					case "":
-						var result = mouseOnOverlay(e.offsetX, e.offsetY);
-						switch(result) {
-							case "topLeft":
-								overlayCanvas.style.cursor = "nw-resize";
-								break;
-							case "centreLeft":
-								overlayCanvas.style.cursor = "w-resize";
-								break;
-							case "bottomLeft":
-								overlayCanvas.style.cursor = "sw-resize";
-								break;
-							case "bottomCentre":
-								overlayCanvas.style.cursor = "s-resize";
-								break;
-							case "bottomRight":
-								overlayCanvas.style.cursor = "se-resize";
-								break;
-							case "centreRight":
-								overlayCanvas.style.cursor = "e-resize";
-								break;
-							case "topRight":
-								overlayCanvas.style.cursor = "ne-resize";
-								break;
-							case "topCentre":
-								overlayCanvas.style.cursor = "n-resize";
-								break;
-							case true:
-									//support for chrome
-									overlayCanvas.style.cursor = "-webkit-grab";
-									//overlayCanvas.style.cursor = "move";
-								break;
-							case false:
-								overlayCanvas.style.cursor = "auto";
-								break;
-						}
-						break;
+						case "centreRight":
+							selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
+							drawScene();
+							drawProperties();	
+							break;
+							
+						case "":
+							var result = mouseOnOverlay(e.offsetX, e.offsetY);
+							switch(result) {
+								case "topLeft":
+									overlayCanvas.style.cursor = "nw-resize";
+									break;
+								case "centreLeft":
+									overlayCanvas.style.cursor = "w-resize";
+									break;
+								case "bottomLeft":
+									overlayCanvas.style.cursor = "sw-resize";
+									break;
+								case "bottomCentre":
+									overlayCanvas.style.cursor = "s-resize";
+									break;
+								case "bottomRight":
+									overlayCanvas.style.cursor = "se-resize";
+									break;
+								case "centreRight":
+									overlayCanvas.style.cursor = "e-resize";
+									break;
+								case "topRight":
+									overlayCanvas.style.cursor = "ne-resize";
+									break;
+								case "topCentre":
+									overlayCanvas.style.cursor = "n-resize";
+									break;
+								case true:
+										//support for chrome
+										overlayCanvas.style.cursor = "-webkit-grab";
+										//overlayCanvas.style.cursor = "move";
+									break;
+								case false:
+									overlayCanvas.style.cursor = "auto";
+									break;
+							}
+							break;
+					}
+					
 				}
-				
 			}
 		});
 		
@@ -1073,30 +1337,30 @@
 		*/
 		
 		function produceDocument() {
-			var document;
+			var exportDoc;
 			var j;
 			
-			document = "\<!DOCTYPE html\>\n";
-			document += "\<html\>\n";
-			document += "\<body\>\n";
-			document += "\<script src='mylibrary.js'\>" + "\</script\>\n";
-			document += "\<script\>\n";
+			exportDoc = "\<!DOCTYPE html\>\n";
+			exportDoc += "\<html\>\n";
+			exportDoc += "\<body\>\n";
+			exportDoc += "\<script src='mylibrary.js'\>" + "\</script\>\n";
+			exportDoc += "\<script\>\n";
 			
-			document += "MYLIB.createCanvas()\n";
+			exportDoc += "MYLIB.createCanvas()\n";
 			
 			for (var i=0;i<scenes.length;i++) {
 				j=0;
 				addText(scenes[i]);
 			}
 			
-			document += "\</script\>\n";
-			document += "\</body\>\n";
-			document += "\</html\>\n";
+			exportDoc += "\</script\>\n";
+			exportDoc += "\</body\>\n";
+			exportDoc += "\</html\>\n";
 			
 			function addText(object) {
 				j++;
 				var name = object.constructor.name + i + j;
-				document += "var " + name + 
+				exportDoc += "var " + name + 
 					" = new MYLIB." + object.constructor.name + "();\n";
 				
 				//make sure only set necessary things
@@ -1106,24 +1370,24 @@
 						if (k === "children") {
 							for (var l=0;l<object.children.length;l++) {
 								var tempName = addText(object.children[l]);
-								document += name + ".add(" + tempName + ");\n";
+								exportDoc += name + ".add(" + tempName + ");\n";
 							}
 						} else if (k === "scripts") {
 							for (var m=0;m<object.scripts.length;m++) {
-								document += name + ".addScript(`" + object.scripts[m].code + "`, \"" + object.scripts[m].name + "\");\n";
+								exportDoc += name + ".addScript(`" + object.scripts[m].code + "`, \"" + object.scripts[m].name + "\");\n";
 							}
 						} else if (k !== "parent") {
 							if (typeof object[k] === "string") {
-								document += object.constructor.name + i + j + "." + k + " = \"" + object[k] + "\";\n";
+								exportDoc += object.constructor.name + i + j + "." + k + " = \"" + object[k] + "\";\n";
 							} else {
-								document += object.constructor.name + i + j + "." + k + " = " + object[k] + ";\n";
+								exportDoc += object.constructor.name + i + j + "." + k + " = " + object[k] + ";\n";
 							}
 						}
 					}
 				}
 				return name;
 			}
-			return document;
+			return exportDoc;
 		}
 		
 		function exportFile() {
@@ -1143,17 +1407,63 @@
 			document.body.removeChild(element);
 		}
 		
+		function readDocument(readDoc) {
+			//validateDocument();
+			//if (confirm("Your stuff will be overwritten")) {
+				console.log(readDoc);
+				var newlineregex = RegExp("\n|;", "g");
+				var newlines = [];
+				var match;
+				
+				while (match = newlineregex.exec(readDoc)) {
+					newlines.push(match.index);
+				
+				}
+				for (var i=0;i<newlines.length;i++) {
+					if (i===0) {
+						var tempString = readDoc.substring(0, newlines[0]);
+					} else {
+						var tempString = readDoc.substring(newlines[i-1], newlines[i]);
+					}
+					
+				}
+				
+			//}
+		}
+		
+		function validateDocument(readDoc) {
+			//:/
+		}
+		
+		function importFile() {
+			var importfile = document.getElementById('importButton');
+			
+			var filereader = new FileReader();
+			filereader.readAsText(importfile.files[0]);
+			filereader.onload = function() {
+				readDocument(filereader.result);
+			};
+		}
+		
 		/*
 			Functions that change the layout of the page
 		*/
 		function showScene() {
 			document.getElementById('sceneOverview').style.display = "block";
 			document.getElementById('projectOverview').style.display = "none";
+			document.getElementById('variableOverview').style.display = "none";
 		}
 		
 		function showProject() {
 			document.getElementById('projectOverview').style.display = "block";
 			document.getElementById('sceneOverview').style.display = "none";
+			document.getElementById('variableOverview').style.display = "none";
+		}
+		
+		function showVariables() {
+			document.getElementById('projectOverview').style.display = "none";
+			document.getElementById('sceneOverview').style.display = "none";
+			document.getElementById('variableOverview').style.display = "block";
 		}
 		
 		function detachTextEditor() {
@@ -1193,11 +1503,18 @@
 		}
 		
 		function play() {
-			if (running === false) {
+			if (menusDisabled === false) {
 				overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 				MYLIB.context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+				//set up global variables here
+				
+				for (var i=0;i<globalVariables.length;i++) {
+					window[globalVariables[i][0]] = globalVariables[i][1];
+				}
+				
 				MYLIB.run(scene.clone());
 				running = true;
+				disableMenus();
 			}
 		}
 		
@@ -1212,6 +1529,7 @@
 			paused = false;
 			running = false;
 			drawScene();
+			enableMenus();
 		}
 		
 		function updateCode() {
@@ -1243,6 +1561,43 @@
 				textArea.value = "This object has no scripts";
 				textArea.readOnly = true;
 			}
+		}
+		
+		function disableMenus() {
+			menusDisabled = true;
+			
+			var properties = document.getElementsByClassName("properties");
+			for (var i=0;i<properties.length;i++) {
+				properties[i].readOnly = true;
+				properties[i].disabled = true;
+			}
+			
+			var sceneChildren = document.getElementsByClassName("sceneChild");
+			for (var i=0;i<sceneChildren.length;i++) {
+				sceneChildren[i].draggable = false;
+			}
+			
+			textArea.readOnly = true;
+			textArea.disabled = true;
+			
+		}
+		
+		function enableMenus() {
+			menusDisabled = false;
+			
+			var properties = document.getElementsByClassName("properties");
+			for (var i=0;i<properties.length;i++) {
+				properties[i].readOnly = false;
+				properties[i].disabled = false;
+			}
+			
+			var sceneChildren = document.getElementsByClassName("sceneChild");
+			for (var i=0;i<sceneChildren.length;i++) {
+				sceneChildren[i].draggable = true;
+			}
+			
+			textArea.readOnly = false;
+			textArea.disabled = false;
 		}
 		
 	</script>

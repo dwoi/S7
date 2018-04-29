@@ -71,25 +71,74 @@
 	width: 100%;
 }
 
+#variableOverview {
+	display: none;
+	height: 85%;
+	width: 100%;
+	
+}
+
+#variables {
+	width: 70%;
+	height: 100%;
+	display: inline-block;
+	overflow: auto;
+}
+
+#addVariables {
+	width: 30%;
+	height: 100%;
+	display: inline-block;
+	float: right;
+	border-left: 2px solid black;
+}
+
+#addVariableButton {
+	width: 100%;
+	padding-top: 3px;
+	padding-bottom: 3px;
+}
+
+#variableName {
+	border: 2px solid black;
+	overflow: auto;
+	width: 100%;
+}
+
+.failAnimation {
+	animation-name: failName;
+	animation-duration: 2s;
+}
+
+@keyframes failName {
+	from {background-color: #f28b79;}
+	to {background-color: #FFFFFF; }
+}
+
 #buttons {
 	width: 100%;
 	height: 15%;
 	border-top: 2px solid black;
 }
 
-#sceneButton, #projectButton{
+#sceneButton, #projectButton, #variablesButton{
 	height: 100%;
-	width: 50%;
+	width: 33.333%;
+	border-right: 2px solid black;
+	font-size: 16px;
 }
 
 #sceneButton {
 	float: left;
-	border-right: 2px solid black;
+	
 }
 
 #projectButton {
+	margin: auto;
+}
+
+#variablesButton {
 	float: right;
-	border-right: 2px solid black;
 }
 
 #toolbar {
@@ -143,8 +192,12 @@
 	padding-right: 10px;
 }
 
-#toolbarLeftButtons:hover #dropdownAddButtons {
-	 display: block;
+#addButton:hover ~ #dropdownAddButtons {
+	display: block;
+}
+
+#dropdownAddButtons:hover {
+	display:block;
 }
 
 #dropdownAddButtons {
@@ -153,6 +206,17 @@
     bottom: 100%;
     background-color: #f9f9f9;
     z-index: 1;
+}
+
+#importUI {
+	
+}
+
+#importButton {
+	opacity: 0;
+	position: absolute;
+	z-index: -1;
+	top: 0;
 }
 
 #toolbarCentreButtons {
@@ -186,7 +250,7 @@
 	/*calculated with js later anyway*/
 }
 
-input {
+.properties {
 	font-size: 16px;
 	border: 1px solid black;
 }
@@ -211,4 +275,90 @@ input {
 	float: left;
 	clear: left;
 	display: block;
+}
+
+#menu {
+	position: absolute;
+	width: 70vw;
+	height: 70vh;
+	top: 15%;
+	left: 15%;
+	background-color: white;
+	border: 2px solid black;
+	border-radius: 20px;
+	display: none;
+}
+
+#importArea {
+	float: right;
+	display: inline-block;
+	border-left: 2px solid black;
+	width: 30%;
+	height: 100%;
+}
+
+#imageBrowser {
+	float: left;
+	display: inline-block;
+	width: 70%;
+	height: 100%;
+	overflow: auto;
+}
+
+#imageButton {
+	background-color: #AAAAAA;
+	display: block;
+	text-align: center;
+	padding: 10% 0;
+	border-radius: 0 0 10px 10px;
+	font-size: 40px;
+}
+
+#useImageButton {
+	width: 100%;
+	background-color: #AAAAAA;
+	display: block;
+	text-align: center;
+	padding: 10% 0;
+	border-radius: 10px 10px 10px 10px;
+	font-size: 40px;
+}
+
+figure {
+	width: 100%;
+}
+
+.imageBox {
+	width: 156px;
+	height: 156px;
+	display: inline-block;
+}
+
+.previewIcon {
+	/*width: 156px;
+	height: 128px;
+	padding-left: 14px;
+	padding-right: 14px;*/
+	width: 128px;
+	height: 128px;
+	display: block;
+	margin: auto;
+}
+
+.imageCaption {
+	text-align: center;
+}
+
+#imagePreview {
+	border: 1px solid black;
+	width: 256px;
+	height: 256px;
+	display: block;
+	margin: auto;
+}
+
+#importImageButton {
+	position: absolute;
+	top: 0;
+	opacity: 0;
 }
