@@ -43,7 +43,7 @@
 	<div id="main">
 		<div id="viewport">
 			<canvas id="overlayCanvas"></canvas>
-			<canvas id="canvas"></canvas>
+			<canvas id="displayCanvas"></canvas>
 			<div id="toolbar">
 				<span id="toolbarLeftButtons">
 					<button id="addButton">Add</button>
@@ -112,9 +112,15 @@
 		//"use script";
 		
 		//set up canvas
-		var canvas = document.getElementById('canvas');
-		canvas.width = parseFloat(window.getComputedStyle(canvas).getPropertyValue('width'));
-		canvas.height = parseFloat(window.getComputedStyle(canvas).getPropertyValue('height'));
+		var displayCanvas = document.getElementById("displayCanvas");
+		var displayCtx = displayCanvas.getContext('2d');
+		
+		displayCanvas.width = parseFloat(window.getComputedStyle(displayCanvas).getPropertyValue('width'));
+		displayCanvas.height = parseFloat(window.getComputedStyle(displayCanvas).getPropertyValue('height'));
+							   				   
+		var canvas = document.createElement('CANVAS');
+		canvas.width = displayCanvas.width;
+		canvas.height = displayCanvas.height;
 		
 		var overlayCanvas = document.getElementById("overlayCanvas");
 		var overlayCtx = overlayCanvas.getContext('2d');
@@ -142,6 +148,11 @@
 		var objectSizeX;
 		var objectSizeY;
 		
+		var zoomX = 1;
+		var zoomY = 1;
+		
+		var backgroundColour = "#AAAAAA";
+		
 		var mouseDown = false;
 		
 		var running = false;
@@ -160,6 +171,8 @@
 		var previewImg = document.getElementById("imagePreview");
 		
 		var savedImages = [];
+		
+		
 		
 		//Command Pattern system
 		
@@ -671,10 +684,13 @@
 		}
 		drawSceneOverview();
 		
+		function getVariableValue(e) {
+			globalVariables[e.target.index][1] = e.target.value
+		}
+		
 		function drawVariableOverview() {
 			var variableElement = document.getElementById('variables');
 			
-			console.log(variableElement.children);
 			while (variableElement.children.length>0) {
 				variableElement.removeChild(variableElement.children[0]);
 			}
@@ -683,7 +699,6 @@
 				var temp = document.createElement("INPUT");
 				temp.type = "text";
 				temp.value = globalVariables[i][0];
-				console.log(temp.value.length);
 				temp.style.width = temp.value.length * 20 + "px";
 				temp.style.border = "1px solid black";
 				
@@ -696,10 +711,12 @@
 				var valueElement = document.createElement("INPUT");
 				valueElement.style.display = "inline-block";
 				valueElement.style.border = "1px solid black";
+				valueElement.index = i;
+				valueElement.addEventListener('input', getVariableValue);
 				
 				var maxWidth = parseFloat(window.getComputedStyle(variableElement).getPropertyValue('width'));
 				var equalsWidth = parseFloat(window.getComputedStyle(equals).getPropertyValue('width'));
-				console.log(maxWidth, equalsWidth);
+				
 				valueElement.style.width = (maxWidth - temp.value.length * 20 - equalsWidth) + "px";
 				variableElement.appendChild(valueElement);
 				//console.log(temp, globalVariables);
@@ -921,8 +938,25 @@
 		function drawScene() {
 			MYLIB.clear();
 			activeScene.draw();
+			
+			displayCtx.fillStyle = backgroundColour;
+			displayCtx.fillRect(0, 0, displayCanvas.width, displayCanvas.height);
+			
+			displayCtx.scale(zoomX, zoomY);
+			
+			//clear canvas
+			displayCtx.clearRect(activeScene.x, activeScene.y, displayCanvas.width, displayCanvas.height);
+			displayCtx.drawImage(canvas, 0, 0);
+			
+			displayCtx.setTransform(1, 0, 0, 1, 0, 0);
 			drawScaleOverlay();
 		}
+		
+		overlayCanvas.addEventListener('wheel', function(e) {
+			zoomX = Math.max(0, zoomX - e.deltaY/1000);
+			zoomY = Math.max(0, zoomX - e.deltaY/1000);
+			drawScene();
+		});
 
 		textArea.addEventListener('keydown', function(e) {
 			if (e.key === "Tab") {
@@ -990,53 +1024,71 @@
 						var descendents = activeScene.getAllDescendents();
 						var selectedSomething = false;
 						for (var i=0;i<descendents.length;i++) {
-							var dims = {x: descendents[i].x, y: descendents[i].y};
+							var dims = {x: descendents[i].x, y: descendents[i].y, rotation: descendents[i].rotation};
 							var parentDims = descendents[i].addParentProperties();
 							
 							dims.x += parentDims.x;
 							dims.y += parentDims.y;
+							dims.rotation += parentDims.rotation;
 							
-							if (descendents[i].isRectangle === true || descendents[i].isImage === true) {
+							var selected = false;
+							
+							var objectWidth;
+							var objectHeight;
+							
+							if (descendents[i].isRectangle === true || descendents[i].isImage === true ||
+								descendents[i].isText === true) {
+								if (descendents[i].isText === true) {
+									objectWidth = descendents[i].getWidth();
+									objectHeight = descendents[i].getHeight();
+								}
+							
+								if (descendents[i].isRectangle === true || descendents[i].isImage === true) {
+									objectWidth = descendents[i].width;
+									objectHeight = descendents[i].height;
+								}
 								
-								if (e.offsetX >= dims.x && e.offsetY >= dims.y &&
-									e.offsetX <= dims.x + descendents[i].width &&
-									e.offsetY <= dims.y + descendents[i].height) {
+								//rotate
+								
+								var newX = e.offsetX - (dims.x + objectWidth/2);
+								var newY = e.offsetY - (dims.y + objectHeight/2);
+								
+								var newMouseX = newX * Math.cos(-dims.rotation) - newY * Math.sin(-dims.rotation);
+								var newMouseY = newX * Math.sin(-dims.rotation) + newY * Math.cos(-dims.rotation);
+								
+								var mouseX = newMouseX + dims.x + objectWidth/2;
+								var mouseY = newMouseY + dims.y + objectHeight/2;
+								
+								if (mouseX >= dims.x && mouseY >= dims.y &&
+									mouseX <= dims.x + objectWidth &&
+									mouseY <= dims.y + objectHeight) {
 									
-									selectObject(descendents[i]);
-									objectDragged = "object";
-									overlayCanvas.style.cursor = "-webkit-grabbing";
-									selectedSomething = true;
-									objectPosX = descendents[i].x;
-									objectPosY = descendents[i].y;
+									selected = true;
 								}
 							}
-							if (descendents[i].isText === true) {
-								
-								if (e.offsetX >= dims.x && e.offsetY >= dims.y &&
-									e.offsetX <= dims.x + descendents[i].getWidth() &&
-									e.offsetY <= dims.y + descendents[i].getHeight()) {
 									
-									selectObject(descendents[i]);
-									objectDragged = "object";
-									overlayCanvas.style.cursor = "-webkit-grabbing";
-									selectedSomething = true;
-									objectPosX = descendents[i].x;
-									objectPosY = descendents[i].y;
-								}
-							}
 							if (descendents[i].isCircle === true) {
 								if (Math.hypot(Math.abs(e.offsetX - dims.x), Math.abs(e.offsetY - dims.y)) <= descendents[i].radius) {
-									selectObject(descendents[i]);
-									objectDragged = "object";
-									overlayCanvas.style.cursor = "-webkit-grabbing";
-									selectedSomething = true;
-									objectPosX = descendents[i].x;
-									objectPosY = descendents[i].y;
+									selected = true;
 								}
+							}
+							
+							if (selected === true) {
+								selectObject(descendents[i]);
+								objectDragged = "object";
+								overlayCanvas.style.cursor = "-webkit-grabbing";
+								selectedSomething = true;
+								objectPosX = descendents[i].x;
+								objectPosY = descendents[i].y;
 							}
 						}
 						if (selectedSomething === false) {
-							selectObject(scene);
+							selectObject(activeScene);
+							objectDragged = "object";
+							overlayCanvas.style.cursor = "-webkit-grabbing";
+							selectedSomething = true;
+							objectPosX = activeScene;
+							objectPosY = activeScene;
 						}
 						break;
 						
@@ -1114,7 +1166,7 @@
 			
 			var dims = {};
 			
-			dims.left = -selectedDims.width/2 -POINT_OFFSET;
+			dims.left = -selectedDims.width/2 - POINT_OFFSET;
 			dims.right = selectedDims.width/2 + POINT_OFFSET;
 			dims.top = -selectedDims.height/2 - POINT_OFFSET;
 			dims.bottom = selectedDims.height/2 + POINT_OFFSET;
@@ -1157,7 +1209,6 @@
 				width: selectedDims.width, height: selectedDims.height, rotation: selectedDims.rotation};
 		}
 		
-		//doesn't work for rotation yet
 		overlayCanvas.addEventListener('mousemove', function(e) {
 			//again use offsetX and offsetY
 			if (menusDisabled === false) {
@@ -1170,154 +1221,164 @@
 				
 				var coordText = document.getElementById('coords');
 				coordText.innerHTML = "(x: " + e.offsetX + ", y: " + e.offsetY + ")";
-				//console.log(e.movementX, e.movementY);
-				if (running === false && paused === false) {
-					var dimX;
-					var dimY;
-					
-					if (selectedObject.isRectangle === true || selectedObject.isImage === true) {
-						dimX = "width";
-						dimY = "height";
-					}
-					if (selectedObject.isCircle === true) {
-						dimX = "radius";
-						dimY = "radius";
-					}
-					if (selectedObject.isText === true) {
-						dimX = "fontSize";
-						dimY = "fontSize";
-					}
-					
-					switch(objectDragged) {
-						case "object":
-							selectedObject.x += e.movementX;
-							selectedObject.y += e.movementY;
-							
-							drawScene();
-							drawProperties();
-							break;
-							
-						case "topLeft":
-							var diff = Math.max(0, selectedObject[dimX] - e.movementX);
-							selectedObject.x -= diff - selectedObject[dimX];
-							selectedObject[dimX] = diff;
-							
-							diff = Math.max(0, selectedObject[dimY] - e.movementY);
-							selectedObject.y -= diff - selectedObject[dimY];
-							selectedObject[dimY] = diff;
-							drawScene();
-							drawProperties();
-							break;
-							
-						case "topCentre":
-							var diff = Math.max(0, selectedObject[dimY] - e.movementY);
-							selectedObject.y -= diff - selectedObject[dimY];
-							selectedObject[dimY] = diff;
-							
-							drawScene();
-							drawProperties();
-							break;
-							
-						case "topRight":
-							selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
-							var diff = Math.max(0, selectedObject[dimY] - e.movementY);
-							selectedObject.y -= diff - selectedObject[dimY];
-							selectedObject[dimY] = diff;
-							
-							drawScene();
-							drawProperties();
-							break;
-							
-						case "centreLeft":
-							var diff = Math.max(0, selectedObject[dimX] - e.movementX);
-							selectedObject.x -= diff - selectedObject[dimX];
-							selectedObject[dimX] = diff;
-							
-							drawScene();
-							drawProperties();
-							
-							break;
-							
-						case "bottomLeft":
-							var diff = Math.max(0, selectedObject[dimX] - e.movementX);
-							selectedObject.x -= diff - selectedObject[dimX];
-							selectedObject[dimX] = diff;
-							
-							selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
-							
-							drawScene();
-							drawProperties();
-							break;
-							
-						case "bottomCentre":
-							selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
-							drawScene();
-							drawProperties();
-							break;
-							
-						case "bottomRight":
-							selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
-							selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
-							drawScene();
-							drawProperties();
-							break;
+				
+				var dimX;
+				var dimY;
+				
+				if (selectedObject.isRectangle === true || selectedObject.isImage === true) {
+					dimX = "width";
+					dimY = "height";
+				}
+				if (selectedObject.isCircle === true) {
+					dimX = "radius";
+					dimY = "radius";
+				}
+				if (selectedObject.isText === true) {
+					dimX = "fontSize";
+					dimY = "fontSize";
+				}
+				
+				switch(objectDragged) {
+					case "object":
+						selectedObject.x += e.movementX;
+						selectedObject.y += e.movementY;
 						
-						case "centreRight":
-							selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
-							drawScene();
-							drawProperties();	
-							break;
-							
-						case "":
-							var result = mouseOnOverlay(e.offsetX, e.offsetY);
-							switch(result) {
-								case "topLeft":
-									overlayCanvas.style.cursor = "nw-resize";
-									break;
-								case "centreLeft":
-									overlayCanvas.style.cursor = "w-resize";
-									break;
-								case "bottomLeft":
-									overlayCanvas.style.cursor = "sw-resize";
-									break;
-								case "bottomCentre":
-									overlayCanvas.style.cursor = "s-resize";
-									break;
-								case "bottomRight":
-									overlayCanvas.style.cursor = "se-resize";
-									break;
-								case "centreRight":
-									overlayCanvas.style.cursor = "e-resize";
-									break;
-								case "topRight":
-									overlayCanvas.style.cursor = "ne-resize";
-									break;
-								case "topCentre":
-									overlayCanvas.style.cursor = "n-resize";
-									break;
-								case true:
-										//support for chrome
-										overlayCanvas.style.cursor = "-webkit-grab";
-										//overlayCanvas.style.cursor = "move";
-									break;
-								case false:
-									overlayCanvas.style.cursor = "auto";
-									break;
-							}
-							break;
-					}
+						drawScene();
+						drawProperties();
+						break;
+						
+					case "topLeft":
+						var diff = Math.max(0, selectedObject[dimX] - e.movementX);
+						selectedObject.x -= diff - selectedObject[dimX];
+						selectedObject[dimX] = diff;
+						
+						diff = Math.max(0, selectedObject[dimY] - e.movementY);
+						selectedObject.y -= diff - selectedObject[dimY];
+						selectedObject[dimY] = diff;
+						drawScene();
+						drawProperties();
+						break;
+						
+					case "topCentre":
+						var diff = Math.max(0, selectedObject[dimY] - e.movementY);
+						selectedObject.y -= diff - selectedObject[dimY];
+						selectedObject[dimY] = diff;
+						
+						drawScene();
+						drawProperties();
+						break;
+						
+					case "topRight":
+						selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
+						var diff = Math.max(0, selectedObject[dimY] - e.movementY);
+						selectedObject.y -= diff - selectedObject[dimY];
+						selectedObject[dimY] = diff;
+						
+						drawScene();
+						drawProperties();
+						break;
+						
+					case "centreLeft":
+						var diff = Math.max(0, selectedObject[dimX] - e.movementX);
+						selectedObject.x -= diff - selectedObject[dimX];
+						selectedObject[dimX] = diff;
+						
+						drawScene();
+						drawProperties();
+						
+						break;
+						
+					case "bottomLeft":
+						var diff = Math.max(0, selectedObject[dimX] - e.movementX);
+						selectedObject.x -= diff - selectedObject[dimX];
+						selectedObject[dimX] = diff;
+						
+						selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
+						
+						drawScene();
+						drawProperties();
+						break;
+						
+					case "bottomCentre":
+						selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
+						drawScene();
+						drawProperties();
+						break;
+						
+					case "bottomRight":
+						selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
+						selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
+						drawScene();
+						drawProperties();
+						break;
 					
+					case "centreRight":
+						selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
+						drawScene();
+						drawProperties();	
+						break;
+						
+					case "":
+						var result = mouseOnOverlay(e.offsetX, e.offsetY);
+						switch(result) {
+							case "topLeft":
+								overlayCanvas.style.cursor = "nw-resize";
+								break;
+							case "centreLeft":
+								overlayCanvas.style.cursor = "w-resize";
+								break;
+							case "bottomLeft":
+								overlayCanvas.style.cursor = "sw-resize";
+								break;
+							case "bottomCentre":
+								overlayCanvas.style.cursor = "s-resize";
+								break;
+							case "bottomRight":
+								overlayCanvas.style.cursor = "se-resize";
+								break;
+							case "centreRight":
+								overlayCanvas.style.cursor = "e-resize";
+								break;
+							case "topRight":
+								overlayCanvas.style.cursor = "ne-resize";
+								break;
+							case "topCentre":
+								overlayCanvas.style.cursor = "n-resize";
+								break;
+							case true:
+									//support for chrome
+									overlayCanvas.style.cursor = "-webkit-grab";
+									//overlayCanvas.style.cursor = "move";
+								break;
+							case false:
+								overlayCanvas.style.cursor = "auto";
+								break;
+						}
+						break;
 				}
 			}
 		});
 		
 		function mouseOnOverlay(mouseX, mouseY) {
+			
+			var newX = mouseX - (pointsObject.x + pointsObject.width/2);
+			var newY = mouseY - (pointsObject.y + pointsObject.height/2);
+			
+			var newMouseX = newX * Math.cos(-pointsObject.rotation) - newY * Math.sin(-pointsObject.rotation);
+			var newMouseY = newX * Math.sin(-pointsObject.rotation) + newY * Math.cos(-pointsObject.rotation);
+			
+			mouseX = newMouseX + pointsObject.x + pointsObject.width/2;
+			mouseY = newMouseY + pointsObject.y + pointsObject.height/2;
+			
 			//checks if on a point
 			for (var i in points) {
-				if (mouseX >= points[i].x + pointsObject.width/2 + pointsObject.x - squareSize/2 && 
-					mouseX <= points[i].x + pointsObject.width/2 + pointsObject.x + squareSize - squareSize/2 &&
-					mouseY >= points[i].y + pointsObject.height/2 + pointsObject.y - squareSize/2 && 
-					mouseY <= points[i].y + pointsObject.height/2 + pointsObject.y + squareSize - squareSize/2) {
+				var newPointX = points[i].x// * Math.cos(pointsObject.rotation) - points[i].y;
+				var newPointY = points[i].y// * Math.sin(pointsObject.rotation) + points[i].x;
+				
+				if (mouseX >= newPointX + pointsObject.width/2 + pointsObject.x - squareSize/2 && 
+					mouseX <= newPointX + pointsObject.width/2 + pointsObject.x + squareSize - squareSize/2 &&
+					mouseY >= newPointY + pointsObject.height/2 + pointsObject.y - squareSize/2 && 
+					mouseY <= newPointY + pointsObject.height/2 + pointsObject.y + squareSize - squareSize/2) {
 						return i;
 				}
 			}
@@ -1345,6 +1406,15 @@
 			exportDoc += "\<body\>\n";
 			exportDoc += "\<script src='mylibrary.js'\>" + "\</script\>\n";
 			exportDoc += "\<script\>\n";
+			
+			for (var i=0;i<globalVariables.length;i++) {
+				exportDoc += "var " + globalVariables[i][0];
+				if (globalVariables[i][1] !== undefined && globalVariables[i][1] !== null) {
+					exportDoc += " = " + globalVariables[i][1] + ";\n";
+				} else {
+					exportDoc += ";\n";
+				}
+			}
 			
 			exportDoc += "MYLIB.createCanvas()\n";
 			
@@ -1504,9 +1574,9 @@
 		
 		function play() {
 			if (menusDisabled === false) {
+				MYLIB.setCanvas(displayCanvas);
 				overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-				MYLIB.context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-				//set up global variables here
+				MYLIB.clear();
 				
 				for (var i=0;i<globalVariables.length;i++) {
 					window[globalVariables[i][0]] = globalVariables[i][1];
@@ -1515,6 +1585,11 @@
 				MYLIB.run(scene.clone());
 				running = true;
 				disableMenus();
+			}
+			if (paused === true) {
+				MYLIB.run(scene.clone());
+				running = true;
+				paused = false;
 			}
 		}
 		
@@ -1526,6 +1601,7 @@
 		
 		function stop() {
 			MYLIB.stop();
+			MYLIB.setCanvas(canvas);
 			paused = false;
 			running = false;
 			drawScene();

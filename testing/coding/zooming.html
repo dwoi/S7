@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head><title> </title>
+<style>
+
+body {
+	margin: 0;
+	border: 0;
+}
+
+canvas {
+	display: block;
+}
+
+</style>
+</head>
+<body>
+<canvas id ="test"></canvas>
+<script>
+
+var canvas = document.createElement("CANVAS");
+var ctx = canvas.getContext("2d");
+
+canvas.width = 500;
+canvas.height = 300;
+
+var zoomCanvas = document.getElementById("test");
+var zoomCtx = zoomCanvas.getContext("2d");
+
+zoomCanvas.style.width = window.innerWidth;
+zoomCanvas.style.height = window.innerHeight;
+
+zoomCanvas.width = window.innerWidth;
+zoomCanvas.height = window.innerHeight;
+
+setInterval(draw, 30);
+var rotation = 1.5;
+
+var x = 100;
+var y = 100;
+
+var width = 50;
+var height = 35;
+
+var offsetX = 0;
+var offsetY = 0;
+
+var zoomX = 1;
+var zoomY = 1;
+
+var mouseDown = false;
+
+function draw() {
+	rotation += 0.01;
+	ctx.save();
+	
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	ctx.translate(x + width/2, y + height/2);
+	ctx.rotate(rotation);
+	
+	ctx.fillRect(-width/2,-height/2,width,height);
+	
+	ctx.restore();
+	
+	ctx.rect(0, 0, canvas.width, canvas.height);
+	ctx.stroke();
+
+	var image = new Image();
+	
+	image.onload = function() {
+		zoomCtx.clearRect(0, 0, zoomCanvas.width, zoomCanvas.height);
+		zoomCtx.scale(zoomX, zoomY);
+		
+		zoomCtx.drawImage(image, offsetX-zoomX/2, offsetY-zoomY/2);
+		zoomCtx.setTransform(1, 0, 0, 1, 0, 0);
+	}
+	
+	image.src = canvas.toDataURL();
+}
+
+function sizeCanvas() {
+	
+}
+
+zoomCanvas.addEventListener('mousemove', function(e) {
+	
+	if (mouseDown) {
+		offsetX += e.movementX;
+		offsetY += e.movementY;
+	}
+	
+});
+
+zoomCanvas.addEventListener('mousedown', function(e) {
+	mouseDown = true;
+});
+
+zoomCanvas.addEventListener('mouseup', function(e) {
+	mouseDown = false;
+});
+
+zoomCanvas.addEventListener('wheel', function(e) {
+	zoomX = Math.max(0, zoomX - e.deltaY/1000);
+	zoomY = Math.max(0, zoomX - e.deltaY/1000);
+});
+
+</script>
+
+</body>
+</html>
