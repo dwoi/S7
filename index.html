@@ -19,7 +19,13 @@
 				</div>
 			</div>
 			<div id="projectOverview">
-				Project Overview
+				<div id="scenesOverview">
+				
+				</div><!--
+				--><div id="sceneButtonContainer">
+					<button onclick="newScene()" class="sceneButtons">New Scene</button>
+					<button onclick="deleteScene()" class="sceneButtons">Delete Scene</button>
+				</div>
 			</div>
 			<div id="variableOverview">
 				<div id="variables">
@@ -55,8 +61,11 @@
 						
 					</div>
 					<button onclick="exportFile()" id="exportButton">Export</button>
-					<label id="importUI" for="importButton">Import</label>
+					<label id="importUI" for="importButton">
+						<span id="importText">Import</span>
+					</label>
 					<input type="file" onchange="importFile()" id="importButton">
+					<button id="deleteButton" onclick="deleteObject()">Delete</button>
 				</span>
 				
 				<span id="toolbarCentreButtons">
@@ -106,10 +115,14 @@
 		</div>
 	</div>
 	
+	<div id="confirmationMenu">
+	
+	</div>
+	
 	<script src="mylibrary.js"></script>
 	<script>
 	
-		//"use script";
+		"use strict";
 		
 		//set up canvas
 		var displayCanvas = document.getElementById("displayCanvas");
@@ -130,6 +143,9 @@
 		
 		overlayCanvas.width = canvas.width;
 		overlayCanvas.height = canvas.height;
+		
+		const SELECTED_BACKGROUND_COLOR = "#3300FF";
+		const SELECTED_TEXT_COLOR = "#FFFFFF";
 
 		var textArea = document.getElementById('textArea');
 		textArea.value = `function start() {\n    \n}\n\nfunction update() {\n    this.x += 1;\n}`;
@@ -148,8 +164,14 @@
 		var objectSizeX;
 		var objectSizeY;
 		
+		var sceneOffsetX;
+		var sceneOffsetY;
+		
 		var zoomX = 1;
 		var zoomY = 1;
+		
+		var mousePosX = 0;
+		var mousePosY = 0;
 		
 		var backgroundColour = "#AAAAAA";
 		
@@ -171,8 +193,6 @@
 		var previewImg = document.getElementById("imagePreview");
 		
 		var savedImages = [];
-		
-		
 		
 		//Command Pattern system
 		
@@ -254,13 +274,16 @@
 		}
 		
 		class ChangeHierachyCommand {
-			constructor(object, oldParent, newParent, element, oldParentEle, newParentEle) {
+			constructor(object, oldParent, newParent, element,
+			oldParentEle, newParentEle, oldIndex, newIndex) {
 				this.object = object;
 				this.oldParent = oldParent;
 				this.newParent = newParent;
 				this.element = element;
 				this.oldParentEle = oldParentEle;
 				this.newParentEle = newParentEle;
+				this.oldIndex = oldIndex;
+				this.newIndex = newIndex;
 			}
 			
 			run() {
@@ -361,6 +384,8 @@
 		
 		var selectedObject = rect;
 		
+		var selectedElement;
+		
 		scene.add(rect2);
 		
 		var rect3 = new MYLIB.Rectangle(10, 10, 50, 20);
@@ -423,14 +448,22 @@
 				}
 			}
 			
-			new Property("x", 1, 1, "number", "x"), new Property("y", 1, 1, "number", "y"),
-			new Property("width", 1, 1, "number", "width"), new Property("height", 1, 1, "number", "height"),
-			new Property("radius", 1, 1, "number", "radius"), new Property("rotation", 1, 1, "number", "rotation"),
-			new Property("string", 3, 1, "text", "string"), new Property("fontSize", 1, 1, "number", "Font Size"),
-			new Property("fill", 3, 2, "boolean", "fill"), new Property("fillColour", 4, 2, "colour", "Fill Colour"),
-			new Property("stroke", 3, 2, "boolean", "stroke"), new Property("strokeColour", 3, 2, "colour", "Stroke Colour"),
-			new Property("strokeSize", 1, 2, "number", "Stroke Size"), new Property("visible", 3, 3, "boolean", "visible"),
-			new Property("opacity", 2, 3, "number"), new Property("name", 10, 3, "text", "name");
+			new Property("x", 1, 1, "number", "x"), 
+			new Property("y", 1, 1, "number", "y"),
+			new Property("width", 1, 1, "number", "width"),
+			new Property("height", 1, 1, "number", "height"),
+			new Property("radius", 1, 1, "number", "radius"), 
+			new Property("rotation", 1, 1, "number", "rotation"),
+			new Property("string", 3, 1, "text", "string"), 
+			new Property("fontSize", 1, 1, "number", "Font Size"),
+			new Property("fill", 3, 2, "boolean", "fill"), 
+			new Property("fillColour", 4, 2, "colour", "Fill Colour"),
+			new Property("stroke", 3, 2, "boolean", "stroke"), 
+			new Property("strokeColour", 3, 2, "colour", "Stroke Colour"),
+			new Property("strokeSize", 1, 2, "number", "Stroke Size"), 
+			new Property("visible", 3, 3, "boolean", "visible"),
+			new Property("opacity", 2, 3, "number"), 
+			new Property("name", 10, 3, "text", "name");
 			new Property("url", 4, 2, "image", "url");
 			
 			for (var j=0;j<numOfColumns;j++) {
@@ -542,10 +575,14 @@
 					_history.run(new ChangePropertyCommand(selectedObject, e.srcElement.property, 
 						selectedObject[e.srcElement.property], e.srcElement.value));
 					//selectedObject[e.srcElement.property] = e.srcElement.value;
-					//drawScene();
+					
 					if (e.srcElement.property === "name") {
-						updatePropertiesName();
-						drawSceneOverview();
+						if (selectedObject.isScene === true) {
+							drawProjectOverview();
+						} else {
+							updatePropertiesName();
+							drawSceneOverview();
+						}
 					}
 					break;
 					
@@ -563,8 +600,6 @@
 			var sceneOverview = document.getElementById("sceneOverview");
 			//do current scene first
 			var currScene = document.getElementById("currentScene");
-			
-			
 			
 			//clear sceneoverview first
 			while (currScene.children.length>0) {
@@ -602,9 +637,18 @@
 					DOMElement.innerHTML = object.name + "<br>";
 					
 					DOMElement.className = "sceneChild";
+					
 					DOMElement.object = object;
 					
 					DOMElement.draggable = true;
+					
+					DOMElement.style.border = "solid 1px white";
+					
+					if (object === selectedObject) {
+						selectedElement = DOMElement;
+						DOMElement.style.color = SELECTED_TEXT_COLOR;
+						DOMElement.style.backgroundColor = SELECTED_BACKGROUND_COLOR;
+					}
 					
 					DOMElement.addEventListener("mouseover", function(e) {
 						if (menusDisabled === false) {
@@ -613,7 +657,7 @@
 					});
 					
 					DOMElement.addEventListener("mouseout", function(e) {
-						e.target.style.border = "none";
+						e.target.style.border = "solid 1px white";
 					});
 					
 					DOMElement.addEventListener("click", function(e) {
@@ -638,7 +682,7 @@
 					});
 					
 					DOMElement.addEventListener("dragend", function(e) {
-						DOMElement.style.border = "initial";
+						DOMElement.style.border = "solid 1px white";
 						//console.log(DOMElement.className);
 					});
 					
@@ -684,8 +728,153 @@
 		}
 		drawSceneOverview();
 		
+		function drawProjectOverview() {
+			var projectOverview = document.getElementById("projectOverview");
+			
+			var scenesEle = document.getElementById('scenesOverview');
+			
+			//clear projectoverview first
+			while (scenesEle.children.length>0) {
+				scenesEle.removeChild(scenesEle.children[0]);
+			}
+			
+			scenesEle.addEventListener("dragover", function(e) {
+				e.preventDefault();
+				
+				//e.clientY
+					
+				var height = scenesEle.children[0].getBoundingClientRect().height;
+				
+				var num = Math.floor((e.clientY + scenesEle.scrollTop) / height);
+				
+				if (scenesEle.children[num] !== elementDragged) {
+					if (elementDragged.index > num) {
+						scenesEle.insertBefore(elementDragged, scenesEle.children[num]);
+					} else {
+						scenesEle.insertBefore(elementDragged, scenesEle.children[num].nextSibling);
+					}
+					//fix index and order of array
+					scenes.splice(elementDragged.index, 1);
+					scenes.splice(num, 0, elementDragged.scene);
+					
+					for (var i=0;i<scenesEle.children.length;i++) {
+						scenesEle.children[i].index = i;
+					}
+				}
+				
+				
+			});
+				
+			scenesEle.addEventListener("drop", function(e) {
+				e.preventDefault();
+				
+				/*if (changedScene === false) {
+					_history.run(new ChangeHierachyCommand(elementDragged.object, elementDragged.object.parent, 
+						activeScene, elementDragged, elementDragged.parentElement, currScene));
+				}*/
+			});
+			
+			for (var i=0;i<scenes.length;i++) {
+				addElement(scenes[i]);
+				function addElement(scene) {
+				
+					let DOMElement = document.createElement("SPAN");
+					
+					DOMElement.innerHTML = scene.name + "<br>";
+					
+					DOMElement.className = "projectChild";
+					
+					DOMElement.scene = scene;
+					
+					DOMElement.index = i;
+					
+					DOMElement.draggable = true;
+					
+					DOMElement.style.border = "1px solid white";
+					
+					if (scene === selectedObject) {
+						selectedElement = DOMElement;
+						DOMElement.style.color = SELECTED_TEXT_COLOR;
+						DOMElement.style.backgroundColor = SELECTED_BACKGROUND_COLOR;
+					}
+					
+					DOMElement.addEventListener("mouseover", function(e) {
+						if (menusDisabled === false) {
+							e.target.style.border = "dashed 1px black";
+						}
+					});
+					
+					DOMElement.addEventListener("mouseout", function(e) {
+						e.target.style.border = "1px solid white";
+					});
+					
+					DOMElement.addEventListener("click", function(e) {
+						if (menusDisabled === false) {
+							activeScene = e.target.scene;
+							selectObject(e.target.scene);
+							drawScene();
+							e.target.style.backgroundColor = "green";
+						}
+					});
+					
+					DOMElement.addEventListener("dragstart", function(e) {
+						if (menusDisabled === false) {
+							elementDragged = e.target;
+							if (e.target.style.border !== "1px solid black") {
+								e.target.style.border = "double 1px black";
+							}
+							//e.target.parentElement.removeChild(e.target);
+							changedScene = false;
+						}
+					});
+					
+					DOMElement.addEventListener("dragover", function(e) {
+						e.preventDefault();
+						
+						
+					});
+					
+					DOMElement.addEventListener("dragend", function(e) {
+						DOMElement.style.border = "initial";
+					});
+					
+					DOMElement.addEventListener("drop", function(e) {
+						e.preventDefault();
+						changedScene = true;
+
+					});
+					
+					scenesEle.appendChild(DOMElement);
+					
+				}
+			}
+		}
+		drawProjectOverview();
+		
+		function newScene() {
+			var temp = new MYLIB.Scene();
+			scenes.push(temp);
+			activeScene = temp;
+			selectObject(temp);
+			drawScene();
+			drawProjectOverview();
+		}
+		
+		function deleteScene() {
+			if (scenes.length > 0) {
+				for (var i=0;i<scenes.length;i++) {
+					if (scenes[i]===activeScene) {
+						scenes.remove(activeScene);
+						
+						activeScene = scenes[i-1];
+						break;
+					}
+				}
+			}
+		}
+		
 		function getVariableValue(e) {
-			globalVariables[e.target.index][1] = e.target.value
+			globalVariables[e.target.index][1] = e.target.value;
 		}
 		
 		function drawVariableOverview() {
@@ -894,10 +1083,13 @@
 		}
 		
 		function selectObject(object) {
+			selectedElement.style.backgroundColor = "white";
+			selectedElement.style.color = "black";
 			selectedObject = object;
 			
 			drawProperties();
 			drawScaleOverlay();
+			drawProjectOverview();
 			
 			var scriptElement = document.getElementById("scriptSelect");
 			scriptElement.value = 0;
@@ -910,6 +1102,12 @@
 			for(var i=0;i<selectedObject.scripts.length;i++) {
 				addScriptOption(selectedObject.scripts[i]);
 			}
+			
+			drawSceneOverview();
+			
+			selectedElement.style.backgroundColor = SELECTED_BACKGROUND_COLOR;
+			selectedElement.style.color = SELECTED_TEXT_COLOR;
+			
 			scriptChange();
 		}
 		
@@ -919,6 +1117,14 @@
 			selectObject(temp);
 			drawScene();
 			drawSceneOverview();
+		}
+		
+		function deleteObject() {
+			activeScene.remove(selectedObject);
+			selectedObject = activeScene;
+			drawScene();
+			drawSceneOverview();
+			drawProperties();
 		}
 		
 		function isRelated(element, element2) {
@@ -937,24 +1143,51 @@
 		
 		function drawScene() {
 			MYLIB.clear();
+			
+			var xPos = activeScene.x;
+			var yPos = activeScene.y;
+			
+			activeScene.x = 0;
+			activeScene.y = 0;
+			
 			activeScene.draw();
 			
 			displayCtx.fillStyle = backgroundColour;
 			displayCtx.fillRect(0, 0, displayCanvas.width, displayCanvas.height);
 			
+			
+			
 			displayCtx.scale(zoomX, zoomY);
 			
 			//clear canvas
-			displayCtx.clearRect(activeScene.x, activeScene.y, displayCanvas.width, displayCanvas.height);
-			displayCtx.drawImage(canvas, 0, 0);
+			displayCtx.clearRect(xPos, yPos, displayCanvas.width, displayCanvas.height);
+			displayCtx.drawImage(canvas, xPos, yPos);
 			
 			displayCtx.setTransform(1, 0, 0, 1, 0, 0);
 			drawScaleOverlay();
+			
+			activeScene.x = xPos;
+			activeScene.y = yPos;
 		}
 		
 		overlayCanvas.addEventListener('wheel', function(e) {
+			var beforeX = zoomX;
+			var beforeY = zoomY;
+			
+			var actualPosX = mousePosX + activeScene.x;
+			var actualPosY = mousePosY + activeScene.y;
+			
+			console.log(e.deltaY);
+			
 			zoomX = Math.max(0, zoomX - e.deltaY/1000);
-			zoomY = Math.max(0, zoomX - e.deltaY/1000);
+			zoomY = Math.max(0, zoomY - e.deltaY/1000);
+			
+			//activeScene.x += mousePosX/2 * (zoomX - beforeX);
+			//activeScene.y += mousePosY/2 * (zoomY - beforeY);
+			
+			activeScene.x -= actualPosX/2 * zoomX;
+			activeScene.y -= actualPosY/2 * zoomY;
+			
 			drawScene();
 		});
 
@@ -1009,7 +1242,6 @@
 		});
 		
 		overlayCanvas.addEventListener('mousedown', function(e) {
-			//WORK ROTATION LATER
 			if (menusDisabled === false) {
 				var result = mouseOnOverlay(e.offsetX, e.offsetY);
 				
@@ -1134,8 +1366,9 @@
 			
 			squareSize = 7;
 			
-			
 			overlayCtx.save();
+			
+			
 			
 			var selectedDims = {x: selectedObject.x, y: selectedObject.y, rotation: selectedObject.rotation};
 			var parentDims = selectedObject.addParentProperties();
@@ -1153,6 +1386,7 @@
 				selectedDims.y -= selectedObject.radius;
 				selectedDims.width = selectedObject.radius * 2;
 				selectedDims.height = selectedObject.radius * 2;
+				
 			}
 			if (selectedObject.isText === true) {
 				selectedDims.width = selectedObject.getWidth();
@@ -1219,11 +1453,16 @@
 					document.selection.empty();
 				}
 				
+				mousePosX = e.offsetX;
+				mousePosY = e.offsetY;
+				
 				var coordText = document.getElementById('coords');
-				coordText.innerHTML = "(x: " + e.offsetX + ", y: " + e.offsetY + ")";
+				coordText.innerHTML = "(x: " + mousePosX + ", y: " + mousePosY + ")";
 				
 				var dimX;
 				var dimY;
+				
+				var sameAxis = false;
 				
 				if (selectedObject.isRectangle === true || selectedObject.isImage === true) {
 					dimX = "width";
@@ -1232,10 +1471,12 @@
 				if (selectedObject.isCircle === true) {
 					dimX = "radius";
 					dimY = "radius";
+					sameAxis = true;
 				}
 				if (selectedObject.isText === true) {
 					dimX = "fontSize";
 					dimY = "fontSize";
+					sameAxis = true;
 				}
 				
 				switch(objectDragged) {
@@ -1248,13 +1489,17 @@
 						break;
 						
 					case "topLeft":
-						var diff = Math.max(0, selectedObject[dimX] - e.movementX);
+						var diff;
+
+						diff = Math.max(0, selectedObject[dimX] - e.movementX);
 						selectedObject.x -= diff - selectedObject[dimX];
 						selectedObject[dimX] = diff;
 						
+
 						diff = Math.max(0, selectedObject[dimY] - e.movementY);
 						selectedObject.y -= diff - selectedObject[dimY];
 						selectedObject[dimY] = diff;
+						
 						drawScene();
 						drawProperties();
 						break;
@@ -1269,7 +1514,11 @@
 						break;
 						
 					case "topRight":
-						selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
+						if (sameAxis === false) {
+							selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
+						} else {
+							selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX/4);
+						}
 						var diff = Math.max(0, selectedObject[dimY] - e.movementY);
 						selectedObject.y -= diff - selectedObject[dimY];
 						selectedObject[dimY] = diff;
