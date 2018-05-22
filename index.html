@@ -29,7 +29,7 @@
 			</div>
 			<div id="variableOverview">
 				<div id="variables">
-				
+					
 				</div>
 				
 				<div id="addVariables">
@@ -453,7 +453,7 @@
 			new Property("width", 1, 1, "number", "width"),
 			new Property("height", 1, 1, "number", "height"),
 			new Property("radius", 1, 1, "number", "radius"), 
-			new Property("rotation", 1, 1, "number", "rotation"),
+			new Property("rotation", 1, 1, "angle", "rotation"),
 			new Property("string", 3, 1, "text", "string"), 
 			new Property("fontSize", 1, 1, "number", "Font Size"),
 			new Property("fill", 3, 2, "boolean", "fill"), 
@@ -482,7 +482,7 @@
 						myinput.property = properties[i].name;
 						myinput.propertyType = properties[i].type;
 						
-						if (myinput.propertyType === "number" || myinput.propertyType === "text") {
+						if (myinput.propertyType === "number" || myinput.propertyType === "text" || myinput.propertyType === "angle") {
 							myinput.type = 'text';
 						
 							myinput.setAttribute("value", selectedObject[properties[i].name]);
@@ -491,6 +491,8 @@
 							myinput.setAttribute("size", properties[i].size);
 							
 							myinput.addEventListener('input', updateProperties);
+							
+							
 						}
 						
 						if (myinput.propertyType === "colour") {
@@ -530,14 +532,31 @@
 						
 						column.appendChild(myinput);
 						
-						
+						if (myinput.propertyType === "angle") {
+							let angleTypeButton = document.createElement("BUTTON");
+							
+							angleTypeButton.innerHTML = selectedObject[properties[i].name + "AngleMode"];
+							//console.log(properties, "AngleMode", selectedObject[properties + "AngleMode"]);
+							angleTypeButton.property = properties[i].name;
+							
+							angleTypeButton.addEventListener('click', changeAngleType);
+							
+							column.appendChild(angleTypeButton);
+						}
 					}
 				}
 				propertiesElement.appendChild(column);
+				
+				
 			}
 			
 		}
 		drawProperties();
+		
+		function changeAngleType(e) {
+			selectedObject.changeAngleType(e.srcElement.property);
+			drawProperties();
+		}
 		
 		function updatePropertiesName() {
 			document.getElementById("propertiesTitle").innerHTML = "Properties for " + selectedObject.name;
@@ -545,7 +564,8 @@
 		
 		function updateProperties(e) {
 			switch(e.srcElement.propertyType) {
-			
+				
+				case "angle":
 				case "number":
 					if (!isNaN(e.srcElement.value) && e.srcElement.value !== "") {
 						_history.run(new ChangePropertyCommand(selectedObject, e.srcElement.property,
@@ -554,7 +574,7 @@
 						//drawScene();
 					}
 					break;
-					
+				
 				case "boolean":
 					
 					//parse as boolean
@@ -1376,6 +1396,10 @@
 			selectedDims.x += parentDims.x;
 			selectedDims.y += parentDims.y;
 			selectedDims.rotation += parentDims.rotation;
+			
+			if (selectedObject.rotationAngleMode === "DEG") {
+				selectedDims.rotation *= Math.PI / 180;
+			}
 			
 			if (selectedObject.isRectangle === true || selectedObject.isImage === true) {
 				selectedDims.width = selectedObject.width;

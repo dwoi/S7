@@ -146,6 +146,7 @@ var MYLIB = {};
 			this.x = x;
 			this.y = y;
 			this.rotation = 0;
+			this.rotationAngleMode = "DEG";
 			
 			this.name = this.constructor.name;
 			
@@ -155,6 +156,16 @@ var MYLIB = {};
 			this.children = [];
 			this.scripts = [];
 			objects.push(this);
+		}
+		
+		changeAngleType(property) {
+			if (this[property + "AngleMode"] === "DEG") {
+				this[property + "AngleMode"] = "RAD";
+				this[property] = this[property] * Math.PI / 180;
+			} else {
+				this[property + "AngleMode"] = "DEG";
+				this[property] = this[property] * 180 / Math.PI;
+			}
 		}
 		
 		rotate(amount) {
@@ -326,6 +337,10 @@ var MYLIB = {};
 				var drawY = this.y + parentProperties.y;
 				var drawRot = this.rotation + parentProperties.rotation;
 				
+				if (this.rotationAngleMode === "DEG") {
+					drawRot *= Math.PI / 180;
+				}
+				
 				if (Number.isInteger(drawX)) {
 					drawX += 0.5;
 				}
@@ -376,6 +391,10 @@ var MYLIB = {};
 				var drawX = this.x + parentProperties.x;
 				var drawY = this.y + parentProperties.y;
 				var drawRot = this.rotation + parentProperties.rotation;
+				
+				if (this.rotationAngleMode === "DEG") {
+					drawRot *= Math.PI / 180;
+				}
 				//rotate circle????
 				
 				context.beginPath();
@@ -423,6 +442,10 @@ var MYLIB = {};
 				var drawX = this.x + parentProperties.x;
 				var drawY = this.y + parentProperties.y;
 				var drawRot = this.rotation + parentProperties.rotation;
+				
+				if (this.rotationAngleMode === "DEG") {
+					drawRot *= Math.PI / 180;
+				}
 				
 				//make it so x, y corresponds to top left, not bottom left
 				var offsetY = this.getHeight();
@@ -494,6 +517,10 @@ var MYLIB = {};
 					context.save();
 					context.translate(this.x + this.width/2, this.y+this.height/2);
 					context.rotate(this.rotation);
+					
+					/*if (this.rotationAngleMode === "DEG") {
+						drawRot *= Math.PI / 180;
+					}*/
 				
 					context.drawImage(this.image, -this.width/2, -this.height/2, this.width, this.height);
 					
