@@ -50,13 +50,11 @@ var MYLIB = {};
 			var sceneChildren = scene.getAllDescendents();
 			for (var i=0;i<sceneChildren.length;i++) {
 				for (var j=0;j<sceneChildren[i].scripts.length;j++) {
-					console.log(i, j);
 					parseScript(sceneChildren[i].scripts[j], sceneChildren[i]);
 				}
 			}
 		//run through all objects
 		} else {
-			
 			for (var i=0;i<objects.length;i++) {
 				for (var j=0;j<objects[i].scripts.length;j++) {
 					parseScript(objects[i].scripts[j], objects[i]);
@@ -119,7 +117,6 @@ var MYLIB = {};
 	
 	function parseScript(script, object) {
 		//run through code and add functions
-		console.log(script);
 		var functions = (new Function("var start, update;" + script.code + ';return {start: start, update: update};//# sourceURL=' + script.name))();
 		if (functions.start !== undefined) {
 			startFunctions.push(functions.start.bind(object));
@@ -149,6 +146,10 @@ var MYLIB = {};
 			this.x = x;
 			this.y = y;
 			this.rotation = 0;
+			this.rotationAngleMode = "DEG";
+			
+			this.opacity = 1;
+			this.visible = true;
 			
 			this.name = this.constructor.name;
 			
@@ -158,6 +159,16 @@ var MYLIB = {};
 			this.children = [];
 			this.scripts = [];
 			objects.push(this);
+		}
+		
+		changeAngleType(property) {
+			if (this[property + "AngleMode"] === "DEG") {
+				this[property + "AngleMode"] = "RAD";
+				this[property] = this[property] * Math.PI / 180;
+			} else {
+				this[property + "AngleMode"] = "DEG";
+				this[property] = this[property] * 180 / Math.PI;
+			}
 		}
 		
 		rotate(amount) {
@@ -191,12 +202,17 @@ var MYLIB = {};
 
 			copy = new this.constructor();
 			
+			//use for ... in?
 			copy.name = this.name;
 			copy.parent = this.parent;
 			copy.rotation = this.rotation;
+			copy.rotationAngleMode = this.rotationAngleMode;
 			copy.scripts = this.scripts;
 			copy.x = this.x;
 			copy.y = this.y;
+			copy.visible = this.visible;
+			copy.opacity = this.opacity;
+			
 			if (this.isRectangle === true) {
 				copy.width = this.width;
 				copy.height = this.height;
@@ -204,15 +220,19 @@ var MYLIB = {};
 			if (this.isCircle === true) {
 				copy.radius = this.radius;
 			}
+			if (this.isText === true) {
+				copy.fontSize = this.fontSize;
+				copy.string = this.string;
+				copy.font = this.font;
+			}
 			
 			if (this.isShape === true) {
-				copy.visible = this.visible;
 				copy.fill = this.fill;
 				copy.fillColour = this.fillColour;
 				copy.stroke = this.stroke;
 				copy.strokeColour = this.strokeColour;
 				copy.strokeSize = this.strokeSize;
-				copy.opacity = this.opacity;
+				
 			}
 
 			for (var i=0;i<this.children.length;i++) {
@@ -250,17 +270,44 @@ var MYLIB = {};
 			var drawX = startProp("x");
 			var drawY = startProp("y");
 			var drawRot = startProp("rotation");
+			var drawOpacity = startProp("opacity");
+			var drawVisible = startProp("visible");
 			
 			function startProp(prop) {
 				var finalProp = 0;
+				
+				if (prop === "opacity") {
+					finalProp = 1;
+				}
+				
+				if (prop === "visible") {
+					finalProp = true;
+				}
 				
 				if (self.parent !== undefined && self.parent !== null) {
 					addProp(self);
 				}
 				
 				function addProp(obj) {
+					if (obj.parent[prop + "AngleMode"] !== self[prop + "AngleMode"]) {
+						if (obj.parent[prop + "AngleMode"] === "DEG") {
+							finalProp += obj.parent[prop] * Math.PI / 180;
+						} else {
+							finalProp += obj.parent[prop] * 180 / Math.PI;
+						}
+					} else {
+						if (prop === "opacity") {
+							
+							finalProp *= obj.parent[prop];
+						} else if (prop === "visible") {
+							if (obj.parent[prop] === false) {
+								finalProp = false;
+							}
+						} else {
+							finalProp += obj.parent[prop];
+						}
+					}
 					
-					finalProp += obj.parent[prop];
 					if (obj.parent.parent !== undefined && obj.parent.parent !== null) {
 						addProp(obj.parent);
 					}
@@ -269,7 +316,7 @@ var MYLIB = {};
 			}
 			
 			
-			return {x: drawX, y: drawY, rotation: drawRot};
+			return {x: drawX, y: drawY, rotation: drawRot, opacity: drawOpacity, visible: drawVisible};
 		}
 		
 		addScript(code="", name) {
@@ -295,13 +342,12 @@ var MYLIB = {};
 	class Shape extends BaseObject {
 		constructor(x, y) {
 			super(x, y);
-			this.visible = true;
+			
 			this.fill = false;
 			this.fillColour = "#FFFFFF";//white
 			this.stroke = true;
 			this.strokeColour = "#000000";//black
 			this.strokeSize = 1;
-			this.opacity = 1;
 			
 			this.isShape = true;
 		}
@@ -317,12 +363,19 @@ var MYLIB = {};
 		}
 		draw() {
 			//rotateContext(this.rotation);
-			if (this.visible === true) {
-				var parentProperties = this.addParentProperties();
+			var parentProperties = this.addParentProperties();
+			
+			var drawX = this.x + parentProperties.x;
+			var drawY = this.y + parentProperties.y;
+			var drawRot = this.rotation + parentProperties.rotation;
+			var drawOpacity = this.opacity * parentProperties.opacity;
+			var drawVisible = this.visible && parentProperties.visible;
+			
+			if (drawVisible === true) {
 				
-				var drawX = this.x + parentProperties.x;
-				var drawY = this.y + parentProperties.y;
-				var drawRot = this.rotation + parentProperties.rotation;
+				if (this.rotationAngleMode === "DEG") {
+					drawRot *= Math.PI / 180;
+				}
 				
 				if (Number.isInteger(drawX)) {
 					drawX += 0.5;
@@ -334,7 +387,11 @@ var MYLIB = {};
 				context.translate(drawX + this.width/2, drawY + this.height/2);
 				context.rotate(drawRot);
 				
-				context.globalAlpha = this.opacity;
+				
+				
+				context.globalAlpha = drawOpacity;
+				
+				//console.log(drawOpacity, this.opacity, parentProperties);
 				
 				context.beginPath();
 				context.rect(-this.width/2, -this.height/2, this.width, this.height);
@@ -367,14 +424,23 @@ var MYLIB = {};
 			this.isCircle = true;
 		}
 		draw() {
-			if (this.visible === true) {
+
+			var parentProperties = this.addParentProperties();
+			
+			var drawX = this.x + parentProperties.x;
+			var drawY = this.y + parentProperties.y;
+			var drawRot = this.rotation + parentProperties.rotation;
+			var drawOpacity = this.opacity * parentProperties.opacity;
+			var drawVisible = this.visible && parentProperties.visible;
+		
+			if (drawVisible === true) {
 				
-				var parentProperties = this.addParentProperties();
-				
-				var drawX = this.x + parentProperties.x;
-				var drawY = this.y + parentProperties.y;
-				var drawRot = this.rotation + parentProperties.rotation;
+				if (this.rotationAngleMode === "DEG") {
+					drawRot *= Math.PI / 180;
+				}
 				//rotate circle????
+				
+				context.globalAlpha = drawOpacity;
 				
 				context.beginPath();
 				context.arc(drawX, drawY, this.radius, 0, 2*Math.PI);
@@ -392,50 +458,72 @@ var MYLIB = {};
 				
 				//close path
 				context.closePath();
+				
+				//reset opacity
+				context.globalAlpha = 1;
 			}
+
 		}
 	}
 	
 	class Text extends Shape {
-		constructor(string="", x=0, y=0) {
+		constructor(string="Text", x=0, y=0) {
 			super(x, y);
 			this.string = string;
 			this.x = x;
 			this.y = y;
 			this.fontSize = 24;
 			this.font = "Arial";
+			
+			//default text settings
+			this.stroke = false;
+			this.fill = true;
+			this.fillColour = "#000000";
+			
+			this.isText = true;
 		}
 		
 		draw() {
-			if (this.visible === true) {
 				
-				var parentProperties = this.addParentProperties();
+			var parentProperties = this.addParentProperties();
+			
+			var drawX = this.x + parentProperties.x;
+			var drawY = this.y + parentProperties.y;
+			var drawRot = this.rotation + parentProperties.rotation;
+			var drawOpacity = this.opacity * parentProperties.opacity;
+			var drawVisible = this.visible && parentProperties.visible;
+		
+			if (drawVisible === true) {
 				
-				var drawX = this.x + parentProperties.x;
-				var drawY = this.y + parentProperties.y;
-				var drawRot = this.rotation + parentProperties.rotation;
+				if (this.rotationAngleMode === "DEG") {
+					drawRot *= Math.PI / 180;
+				}
+				
+				//make it so x, y corresponds to top left, not bottom left
+				var offsetY = this.getHeight();
+				
+				context.globalAlpha = drawOpacity;
 				
 				context.save();
-				context.translate(drawX + this.width/2, drawY + this.height/2);
+				context.translate(drawX + this.getWidth()/2, drawY + this.getHeight()/2);
 				context.rotate(drawRot);
-				
-				context.globalAlpha = this.opacity;
 				
 				context.font = this.fontSize + "px " + this.font;
 				
 				if (this.stroke === true) {
 					context.strokeStyle = this.strokeColour;
 					context.lineWidth = this.strokeSize;
-					context.strokeText(this.string, drawX, drawY);
+					context.strokeText(this.string, -this.getWidth()/2, -this.getHeight()/2 + offsetY);
 				}
 				
 				if (this.fill === true) {
 					context.fillStyle = this.fillColour;
-					context.fillText(this.string, drawX, drawY);
+					context.fillText(this.string, -this.getWidth()/2, -this.getHeight()/2 + offsetY);
 				}
 				
 				context.restore();
 				
+				//reset opacity
 				context.globalAlpha = 1;
 			}
 		}
@@ -444,52 +532,95 @@ var MYLIB = {};
 			context.font = this.fontSize + "px " + this.font;
 			return context.measureText(this.string).width;
 		}
-		
+		getHeight() {
+			return this.fontSize;
+		}
 	}
 	
 	//works but loads of cleanup to do around fixing not having parameters when called
 	//images will always draw but may draw out of order if not loaded
-	class _Image extends BaseObject {
-		constructor(url, x, y, width, height) {
+	class Sprite extends BaseObject {
+		constructor(url="", x=0, y=0, width=50, height=50) {
 			super(x, y);
 			var img = new Image(x, y);
-			if (width !== undefined) {
-				img.width = width;
-				this.width = width;
+			
+			this.url = url;
+			
+			this.width = img.width;
+			this.height = img.height;
+			
+			if (url !== undefined) {
+				img.src = url;
+			
+				this.image = img;
+				this.loaded = false;
+				
+				var self = this;
+				this.image.addEventListener('load', function() {
+					self.loaded = true;
+				});
 			}
-			if (height !== undefined) {
-				img.height = height;
-				this.height = height;
-			}
-			img.src = url;
 			
-			this.image = img;
-			this.loaded = false;
-			
-			var self = this;
-			this.image.addEventListener('load', function() {
-				self.loaded = true;
-			});
-			
-			this.isImage = true;
+			this.isSprite = true;
 		}
 		
 		draw() {
 			if (this.loaded === true) {
-				if(this.rotation !== 0) {
-					context.save();
-					context.translate(this.x + this.width/2, this.y+this.height/2);
-					context.rotate(this.rotation);
+			//if (this.visible === true) {
+				var parentProperties = this.addParentProperties();
 				
+				var drawX = this.x + parentProperties.x;
+				var drawY = this.y + parentProperties.y;
+				var drawRot = this.rotation + parentProperties.rotation;
+				var drawOpacity = this.opacity * parentProperties.opacity;
+				var drawVisible = this.visible && parentProperties.visible;
+			
+				if (drawVisible === true) {
+					
+					if (this.rotationAngleMode === "DEG") {
+						drawRot *= Math.PI / 180;
+					}
+					
+					context.save();
+					context.translate(drawX + this.width/2, drawY + this.height/2);
+					context.rotate(drawRot);
+					
+					context.globalAlpha = drawOpacity;
+					
 					context.drawImage(this.image, -this.width/2, -this.height/2, this.width, this.height);
 					
 					context.restore();
-				} else {
-					context.drawImage(this.image, this.x, this.y, this.width, this.height);
+					
+					//reset opacity
+					context.globalAlpha = 1;
+				//}
+
 				}
 			} else {
-				imageLoad(this.image, this.x, this.y);
+				//console.warn("image " + this.name + " is not loaded");
+				//imageLoad(this.image, this.x, this.y);
 			}
+		}
+		
+		setImage(url) {
+			
+			this.image = new Image();
+			
+			this.loaded = false;
+			
+			var self = this;
+
+			this.image.addEventListener('load', function() {
+				//note this = this.image
+				self.loaded = true;
+				self.width = this.width;
+				self.height = this.height;
+			});
+			this.image.addEventListener('error', function(e) {
+				console.log(e, "ERROR");
+			});
+			
+			this.image.src = url;
 		}
 		
 	}
@@ -506,7 +637,7 @@ var MYLIB = {};
 		
 	}
 	
-	//draws image when it's loaded
+	/*//draws image when it's loaded
 	async function imageLoad(img, x, y, width, height) {
 		var result = await waitForImage(img);
 		context.drawImage(img, x, y, width, height);
@@ -518,7 +649,7 @@ var MYLIB = {};
 				resolve('loaded1');
 			});
 		});
-	}
+	}*/
 	
 	class Scene extends BaseObject {
 		constructor(x=0, y=0) {
@@ -535,7 +666,15 @@ var MYLIB = {};
 			}
 		}
 		
+		scale(scaleX, scaleY, pointX=0, pointY=0) {
+			context.translate(pointX, pointY);
+			context.scale(scaleX, scaleY);
+			context.translate(-pointX, -pointY);
+		}
 		
+		move(x, y) {
+			context.translate(x, y);
+		}
 	}
 	
 	/*
@@ -565,7 +704,7 @@ var MYLIB = {};
 	MYLIB.Circle = Circle;
 	MYLIB.Scene = Scene;
 	MYLIB.Text = Text;
-	MYLIB.Image = _Image;
+	MYLIB.Sprite = Sprite;
 	MYLIB.createCanvas = createCanvas;
 	MYLIB.setCanvas = setCanvas;
 	MYLIB.clear = clear;

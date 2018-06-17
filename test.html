@@ -4,55 +4,63 @@
 <script src='mylibrary.js'></script>
 <script>
 MYLIB.createCanvas()
-var Scene01 = new MYLIB.Scene();
-var Circle02 = new MYLIB.Circle();
-Circle02.x = 350;
-Circle02.y = 100;
-Circle02.radius = 60;
-Scene01.add(Circle02);
-var Rectangle03 = new MYLIB.Rectangle();
-Rectangle03.x = 30;
-Rectangle03.y = 300;
-Rectangle03.rotation = 1;
-Rectangle03.addScript(`function start() {
+var Scene0 = new MYLIB.Scene();
+Scene0.name = "Scene0";
+var Circle0 = new MYLIB.Circle();
+Circle0.x = 350;
+Circle0.y = 100;
+Circle0.name = "Circle0";
+Circle0.radius = 60;
+Scene0.add(Circle0);
+var Rectangle0 = new MYLIB.Rectangle();
+Rectangle0.x = 30;
+Rectangle0.y = 300;
+Rectangle0.rotation = 1;
+Rectangle0.name = "Rectangle0";
+Rectangle0.addScript(`function start() {
     
 }
 
 function update() {
     this.x += 1;
 }`, "script1");
-Rectangle03.addScript(`function start() {
+Rectangle0.addScript(`function start() {
     this.fill = true;
     this.fillColour = "green";
 }`, "script2");
-Rectangle03.width = 100;
-Rectangle03.height = 50;
-Scene01.add(Rectangle03);
-var Rectangle04 = new MYLIB.Rectangle();
-Rectangle04.x = 50;
-Rectangle04.y = 100;
-Rectangle04.name = "fireRect";
-var Rectangle05 = new MYLIB.Rectangle();
-Rectangle05.x = 10;
-Rectangle05.y = 10;
-Rectangle05.name = "testRecto";
-Rectangle05.width = 50;
-Rectangle04.add(Rectangle05);
-Rectangle05.fill = true;
-Rectangle05.fillColour = "#FF0000";
-Rectangle05.width = 100;
-Rectangle05.height = 50;
-Scene01.add(Rectangle04);
-var Text06 = new MYLIB.Text();
-Text06.x = 500;
-Text06.y = 300;
-Text06.string = "Hello!";
-Text06.fontSize = 40;
-Scene01.add(Text06);
-Scene01.addScript(`function update() {
+Rectangle0.width = 100;
+Rectangle0.height = 50;
+Scene0.add(Rectangle0);
+var fireRect = new MYLIB.Rectangle();
+fireRect.x = 50;
+fireRect.y = 100;
+fireRect.name = "fireRect";
+var testRecto = new MYLIB.Rectangle();
+testRecto.x = 10;
+testRecto.y = 10;
+testRecto.name = "testRecto";
+testRecto.width = 50;
+fireRect.add(testRecto);
+fireRect.fill = true;
+fireRect.fillColour = "#FF0000";
+fireRect.width = 100;
+fireRect.height = 50;
+Scene0.add(fireRect);
+var Text0 = new MYLIB.Text();
+Text0.x = 500;
+Text0.y = 300;
+Text0.name = "Text0";
+Text0.string = "Hello!";
+Text0.fontSize = 40;
+Scene0.add(Text0);
+var Sprite0 = new MYLIB.Sprite();
+Sprite0.name = "Sprite0";
+Scene0.add(Sprite0);
+Scene0.addScript(`function update() {
     MYLIB.clear();
     this.draw();
 }`, "default");
+Scene0.currentTransform = matrix(1, 0, 0, 1, 0, 0);
 </script>
 </body>
 </html>

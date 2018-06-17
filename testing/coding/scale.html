@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head><title> </title>
+<style>
+
+body {
+	margin: 0;
+	border: 0;
+}
+
+canvas {
+	display: block;
+}
+
+</style>
+</head>
+<body>
+<script src="testlibrary.js"></script>
+<script>
+
+	MYLIB.createCanvas(500, 300);
+	
+	var scene = new MYLIB.Scene();
+	
+	var rect = new MYLIB.Rectangle(30, 30, 100, 100);
+	
+	var rect2 = new MYLIB.Rectangle(0, 0, MYLIB.canvas.width-1, MYLIB.canvas.height-1);
+	
+	scene.add(rect, rect2);
+	
+	var mousedown = false;
+	
+	document.addEventListener('wheel', function(e) {
+		if (e.deltaY < 0) {
+			scene.scale(1.5, 1.5, e.clientX, e.clientY);
+			MYLIB.clear();
+			scene.draw();
+		} else {
+			scene.scale(0.5, 0.5, e.clientX, e.clientY);
+			MYLIB.clear();
+			scene.draw();
+		}
+	});
+	
+	document.addEventListener('mousedown', function() {
+		mousedown = true;
+	});
+	
+	document.addEventListener('mouseup', function() {
+		mousedown = false;
+	});
+	
+	document.addEventListener('mousemove', function(e) {
+		if (mousedown) {
+			scene.move(e.movementX, e.movementY);
+			MYLIB.clear();
+			scene.draw();
+		}
+	});
+	
+	scene.draw();
+
+
+</script>
+
+</body>
+</html>

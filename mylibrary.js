@@ -11,8 +11,9 @@ var MYLIB = {};
 	var lastTime;
 	var deltaTime;
 	
-	var startFunctions = [];
-	var updateFunctions = [];
+	var functionList = {};
+	
+	var nameOfFunctions = ["start", "update", "hover", "click"];
 	
 	//remember booleans are values not references
 	var runSpontaneously = true;
@@ -23,6 +24,9 @@ var MYLIB = {};
 	
 	var paused = false;
 	var running = false;
+	
+	var mouseX, mouseY;
+	var mouseDown;
 	
 	//only run setup once stuff is finished 
 	if (document.readyState === 'complete') {
@@ -39,7 +43,6 @@ var MYLIB = {};
 	}
 	
 	function setup(scene) {
-		//createCanvas();
 		
 		//parse all scripts
 		if (scene !== undefined) {
@@ -62,14 +65,67 @@ var MYLIB = {};
 			}
 		}
 		
-		for(var i=0;i<startFunctions.length;i++) {
-			startFunctions[i]();
+		for(var i=0;i<functionList.start.length;i++) {
+			functionList.start[i][0]();
 		}
 		animate();
+		
+		addEventListeners();
+	}
+	
+	function addEventListeners() {
+		canvas.addEventListener('mousemove', onMouseMove);
+		document.addEventListener('mousedown', onMouseDown);
+		document.addEventListener('mouseup', onMouseUp);
+	}
+	
+	function removeEventListeners() {
+		canvas.removeEventListener('mousemove', onMouseMove);
+		document.removeEventListener('mousedown', onMouseDown);
+		document.removeEventListener('mouseup', onMouseUp);
+	}
+	
+	function onMouseMove(e) {
+		mouseX = e.offsetX;
+		mouseY = e.offsetY;
+	}
+	
+	function onMouseDown(e) {
+		mouseDown = true;
+		for (var i=0;i<functionList.click.length;i++) {
+			if (mouseX !== undefined && mouseX !== null) {
+				if (functionList.click[i][1].pointInside(mouseX, mouseY)) {
+					functionList.click[i][0]();
+				}
+			}
+		}
+	}
+	
+	function onMouseUp(e) {
+		mouseDown = false;
+	}
+	
+	function switchScene(scene) {
+		if (scene !== undefined) {
+			functionList = [];
+			for (var i=0;i<scene.scripts.length;i++) {
+				parseScript(scene.scripts[i], scene);
+			}
+			
+			var sceneChildren = scene.getAllDescendents();
+			for (var i=0;i<sceneChildren.length;i++) {
+				for (var j=0;j<sceneChildren[i].scripts.length;j++) {
+					parseScript(sceneChildren[i].scripts[j], sceneChildren[i]);
+				}
+			}
+		} else {
+			console.warn("invalid scene provided");
+		}
 	}
 
 	function run(scene) {
 		running = true;
+		addEventListeners();
 		if (paused === true) {
 			paused = false;
 			animate();
@@ -81,13 +137,14 @@ var MYLIB = {};
 	function pause() {
 		paused = true;
 		running = false;
+		removeEventListeners();
 	}
 	
 	function stop() {
 		paused = false;
 		running = false;
-		startFunctions = [];
-		updateFunctions = [];
+		functionList = {};
+		removeEventListeners();
 	}
 	
 	function createCanvas(width=window.innerWidth, height=window.innerHeight) {
@@ -116,31 +173,64 @@ var MYLIB = {};
 	}
 	
 	function parseScript(script, object) {
+		
+		//string for thing
+		
+		var initStr = "var ";
+		var returnStr = ";return {";
+		for (var i=0;i<nameOfFunctions.length;i++) {
+			
+			var commaText = ", ";
+			if (i === 0) {
+				commaText = "";
+			}
+			initStr += commaText + nameOfFunctions[i];
+			returnStr += commaText + nameOfFunctions[i] + ": " + nameOfFunctions[i];
+		}
+		initStr += ";";
+		returnStr += "};//# sourceURL=" + script.name;
+		
+		for (var i=0;i<nameOfFunctions.length;i++) {
+			if (!functionList[nameOfFunctions[i]]) {
+				functionList[nameOfFunctions[i]] = [];
+			}
+		}
+		
 		//run through code and add functions
-		var functions = (new Function("var start, update;" + script.code + ';return {start: start, update: update};//# sourceURL=' + script.name))();
-		if (functions.start !== undefined) {
-			startFunctions.push(functions.start.bind(object));
+		var functions = (new Function(initStr + script.code + returnStr))();
+		for (var i in functions) {
+			if (functions[i] === undefined || functions[i] === null) {
+				continue;
+			}
+			functionList[i].push([functions[i].bind(object), object]);
 		}
-		if (functions.update !== undefined) {
-			updateFunctions.push(functions.update.bind(object));
-		}
+		
 	}
 	
 	function animate() {
-		for (var i=0;i<updateFunctions.length;i++) {
-			updateFunctions[i]();
-		}
 		if (paused === false && running === true) {
+			for (var i=0;i<functionList.update.length;i++) {
+				functionList.update[i][0]();
+			}
+			//check stuff
+			for (var i=0;i<functionList.hover.length;i++) {
+				if (mouseX !== undefined && mouseX !== null) {
+					if (functionList.hover[i][1].pointInside(mouseX, mouseY)) {
+						functionList.hover[i][0]();
+					}
+				}
+			}
+			if (mouseDown) {
+				
+			}
 			requestAnimationFrame(animate);
 		}
 	}
 	
-	
-	
 	/*
 	**CLASSES
 	*/
-
+	
 	class BaseObject {
 		constructor(x, y) {
 			this.x = x;
@@ -148,7 +238,17 @@ var MYLIB = {};
 			this.rotation = 0;
 			this.rotationAngleMode = "DEG";
 			
-			this.name = this.constructor.name;
+			this.opacity = 1;
+			this.visible = true;
+			
+			let count = 0;
+			for (var i=0;i<objects.length;i++) {
+				if (objects[i].constructor.name === this.constructor.name) {
+					count++;
+				}
+			}
+			
+			this.name = this.constructor.name + count;
 			
 			this.isBaseObject = true;
 			
@@ -199,12 +299,17 @@ var MYLIB = {};
 
 			copy = new this.constructor();
 			
+			//use for ... in?
 			copy.name = this.name;
 			copy.parent = this.parent;
 			copy.rotation = this.rotation;
+			copy.rotationAngleMode = this.rotationAngleMode;
 			copy.scripts = this.scripts;
 			copy.x = this.x;
 			copy.y = this.y;
+			copy.visible = this.visible;
+			copy.opacity = this.opacity;
+			
 			if (this.isRectangle === true) {
 				copy.width = this.width;
 				copy.height = this.height;
@@ -219,13 +324,12 @@ var MYLIB = {};
 			}
 			
 			if (this.isShape === true) {
-				copy.visible = this.visible;
 				copy.fill = this.fill;
 				copy.fillColour = this.fillColour;
 				copy.stroke = this.stroke;
 				copy.strokeColour = this.strokeColour;
 				copy.strokeSize = this.strokeSize;
-				copy.opacity = this.opacity;
+				
 			}
 
 			for (var i=0;i<this.children.length;i++) {
@@ -263,17 +367,44 @@ var MYLIB = {};
 			var drawX = startProp("x");
 			var drawY = startProp("y");
 			var drawRot = startProp("rotation");
+			var drawOpacity = startProp("opacity");
+			var drawVisible = startProp("visible");
 			
 			function startProp(prop) {
 				var finalProp = 0;
+				
+				if (prop === "opacity") {
+					finalProp = 1;
+				}
+				
+				if (prop === "visible") {
+					finalProp = true;
+				}
 				
 				if (self.parent !== undefined && self.parent !== null) {
 					addProp(self);
 				}
 				
 				function addProp(obj) {
+					if (obj.parent[prop + "AngleMode"] !== self[prop + "AngleMode"]) {
+						if (obj.parent[prop + "AngleMode"] === "DEG") {
+							finalProp += obj.parent[prop] * Math.PI / 180;
+						} else {
+							finalProp += obj.parent[prop] * 180 / Math.PI;
+						}
+					} else {
+						if (prop === "opacity") {
+							
+							finalProp *= obj.parent[prop];
+						} else if (prop === "visible") {
+							if (obj.parent[prop] === false) {
+								finalProp = false;
+							}
+						} else {
+							finalProp += obj.parent[prop];
+						}
+					}
 					
-					finalProp += obj.parent[prop];
 					if (obj.parent.parent !== undefined && obj.parent.parent !== null) {
 						addProp(obj.parent);
 					}
@@ -282,7 +413,7 @@ var MYLIB = {};
 			}
 			
 			
-			return {x: drawX, y: drawY, rotation: drawRot};
+			return {x: drawX, y: drawY, rotation: drawRot, opacity: drawOpacity, visible: drawVisible};
 		}
 		
 		addScript(code="", name) {
@@ -308,13 +439,12 @@ var MYLIB = {};
 	class Shape extends BaseObject {
 		constructor(x, y) {
 			super(x, y);
-			this.visible = true;
+			
 			this.fill = false;
 			this.fillColour = "#FFFFFF";//white
 			this.stroke = true;
 			this.strokeColour = "#000000";//black
 			this.strokeSize = 1;
-			this.opacity = 1;
 			
 			this.isShape = true;
 		}
@@ -330,12 +460,15 @@ var MYLIB = {};
 		}
 		draw() {
 			//rotateContext(this.rotation);
-			if (this.visible === true) {
-				var parentProperties = this.addParentProperties();
-				
-				var drawX = this.x + parentProperties.x;
-				var drawY = this.y + parentProperties.y;
-				var drawRot = this.rotation + parentProperties.rotation;
+			var parentProperties = this.addParentProperties();
+			
+			var drawX = this.x + parentProperties.x;
+			var drawY = this.y + parentProperties.y;
+			var drawRot = this.rotation + parentProperties.rotation;
+			var drawOpacity = this.opacity * parentProperties.opacity;
+			var drawVisible = this.visible && parentProperties.visible;
+			
+			if (drawVisible === true) {
 				
 				if (this.rotationAngleMode === "DEG") {
 					drawRot *= Math.PI / 180;
@@ -351,7 +484,11 @@ var MYLIB = {};
 				context.translate(drawX + this.width/2, drawY + this.height/2);
 				context.rotate(drawRot);
 				
-				context.globalAlpha = this.opacity;
+				
+				
+				context.globalAlpha = drawOpacity;
+				
+				//console.log(drawOpacity, this.opacity, parentProperties);
 				
 				context.beginPath();
 				context.rect(-this.width/2, -this.height/2, this.width, this.height);
@@ -374,6 +511,14 @@ var MYLIB = {};
 			}
 		}
 		
+		pointInside(x, y) {
+			if (x >= this.x && x <= this.x + this.width &&
+				y >= this.y && y <= this.y + this.height) {
+				return true;
+			}
+			return false;
+		}
+		
 	}
 	
 	class Circle extends Shape {
@@ -384,18 +529,23 @@ var MYLIB = {};
 			this.isCircle = true;
 		}
 		draw() {
-			if (this.visible === true) {
-				
-				var parentProperties = this.addParentProperties();
-				
-				var drawX = this.x + parentProperties.x;
-				var drawY = this.y + parentProperties.y;
-				var drawRot = this.rotation + parentProperties.rotation;
+
+			var parentProperties = this.addParentProperties();
+			
+			var drawX = this.x + parentProperties.x;
+			var drawY = this.y + parentProperties.y;
+			var drawRot = this.rotation + parentProperties.rotation;
+			var drawOpacity = this.opacity * parentProperties.opacity;
+			var drawVisible = this.visible && parentProperties.visible;
+		
+			if (drawVisible === true) {
 				
 				if (this.rotationAngleMode === "DEG") {
 					drawRot *= Math.PI / 180;
 				}
 				//rotate circle????
+				
+				context.globalAlpha = drawOpacity;
 				
 				context.beginPath();
 				context.arc(drawX, drawY, this.radius, 0, 2*Math.PI);
@@ -413,7 +563,18 @@ var MYLIB = {};
 				
 				//close path
 				context.closePath();
+				
+				//reset opacity
+				context.globalAlpha = 1;
 			}
+
+		}
+		
+		pointInside(x, y) {
+			if (Math.hypot(this.y - y, this.x - x) <= this.radius) {
+				return true;
+			}
+			return false;
 		}
 	}
 	
@@ -435,13 +596,16 @@ var MYLIB = {};
 		}
 		
 		draw() {
-			if (this.visible === true) {
 				
-				var parentProperties = this.addParentProperties();
-				
-				var drawX = this.x + parentProperties.x;
-				var drawY = this.y + parentProperties.y;
-				var drawRot = this.rotation + parentProperties.rotation;
+			var parentProperties = this.addParentProperties();
+			
+			var drawX = this.x + parentProperties.x;
+			var drawY = this.y + parentProperties.y;
+			var drawRot = this.rotation + parentProperties.rotation;
+			var drawOpacity = this.opacity * parentProperties.opacity;
+			var drawVisible = this.visible && parentProperties.visible;
+		
+			if (drawVisible === true) {
 				
 				if (this.rotationAngleMode === "DEG") {
 					drawRot *= Math.PI / 180;
@@ -450,11 +614,11 @@ var MYLIB = {};
 				//make it so x, y corresponds to top left, not bottom left
 				var offsetY = this.getHeight();
 				
+				context.globalAlpha = drawOpacity;
+				
 				context.save();
 				context.translate(drawX + this.getWidth()/2, drawY + this.getHeight()/2);
 				context.rotate(drawRot);
-				
-				context.globalAlpha = this.opacity;
 				
 				context.font = this.fontSize + "px " + this.font;
 				
@@ -471,6 +635,7 @@ var MYLIB = {};
 				
 				context.restore();
 				
+				//reset opacity
 				context.globalAlpha = 1;
 			}
 		}
@@ -482,11 +647,19 @@ var MYLIB = {};
 		getHeight() {
 			return this.fontSize;
 		}
+		
+		pointInside(x, y) {
+			if (x >= this.x && x <= this.x + this.getWidth() &&
+				y >= this.y && y <= this.y + this.getHeight()) {
+				return true;
+			}
+			return false;
+		}
 	}
 	
 	//works but loads of cleanup to do around fixing not having parameters when called
 	//images will always draw but may draw out of order if not loaded
-	class _Image extends BaseObject {
+	class Sprite extends BaseObject {
 		constructor(url="", x=0, y=0, width=50, height=50) {
 			super(x, y);
 			var img = new Image(x, y);
@@ -508,29 +681,45 @@ var MYLIB = {};
 				});
 			}
 			
-			this.isImage = true;
+			this.isSprite = true;
 		}
 		
 		draw() {
 			if (this.loaded === true) {
-				if(this.rotation !== 0) {
-					context.save();
-					context.translate(this.x + this.width/2, this.y+this.height/2);
-					context.rotate(this.rotation);
-					
-					/*if (this.rotationAngleMode === "DEG") {
-						drawRot *= Math.PI / 180;
-					}*/
+			//if (this.visible === true) {
+				var parentProperties = this.addParentProperties();
 				
+				var drawX = this.x + parentProperties.x;
+				var drawY = this.y + parentProperties.y;
+				var drawRot = this.rotation + parentProperties.rotation;
+				var drawOpacity = this.opacity * parentProperties.opacity;
+				var drawVisible = this.visible && parentProperties.visible;
+			
+				if (drawVisible === true) {
+					
+					if (this.rotationAngleMode === "DEG") {
+						drawRot *= Math.PI / 180;
+					}
+					
+					context.save();
+					context.translate(drawX + this.width/2, drawY + this.height/2);
+					context.rotate(drawRot);
+					
+					context.globalAlpha = drawOpacity;
+					
 					context.drawImage(this.image, -this.width/2, -this.height/2, this.width, this.height);
 					
 					context.restore();
-				} else {
-					context.drawImage(this.image, this.x, this.y, this.width, this.height);
+					
+					//reset opacity
+					context.globalAlpha = 1;
+				//}
+
 				}
-			}/* else {
-				imageLoad(this.image, this.x, this.y);
-			}*/
+			} else {
+				//console.warn("image " + this.name + " is not loaded");
+				//imageLoad(this.image, this.x, this.y);
+			}
 		}
 		
 		setImage(url) {
@@ -540,18 +729,27 @@ var MYLIB = {};
 			this.loaded = false;
 			
 			var self = this;
-			
+
 			this.image.addEventListener('load', function() {
 				//note this = this.image
 				self.loaded = true;
 				self.width = this.width;
 				self.height = this.height;
 			});
+			this.image.addEventListener('error', function(e) {
+				console.log(e, "ERROR");
+			});
 			
 			this.image.src = url;
-			
 		}
 		
+		pointInside(x, y) {
+			if (x >= this.x && x <= this.x + this.width &&
+				y >= this.y && y <= this.y + this.height) {
+				return true;
+			}
+			return false;
+		}
 	}
 	
 	class Script {
@@ -585,17 +783,58 @@ var MYLIB = {};
 			super(x, y);
 			
 			this.isScene = true;
+			
+			this.currentTransform = new DOMMatrix([1, 0, 0, 1, 0, 0]);
+			
 		}
 		
 		draw() {
+			context.save();
+			
 			var descendents = this.getAllDescendents();
 			
 			for (var i=0;i<descendents.length;i++) {
 				descendents[i].draw();
 			}
+			
+			context.restore();
 		}
 		
+		zoom(scaleX, scaleY, pointX=0, pointY=0) {
+			
+			/*var scaleChangeX = ((this.zoomX * scaleX) - this.zoomX) / scaleX;
+			var scaleChangeY = ((this.zoomY * scaleY) - this.zoomY) / scaleY;
+			
+			//var scaleChangeX = 0;
+			//var scaleChangeY = 0;
+			
+			this.x -= ((pointX + this.x) / this.zoomX) * scaleChangeX;
+			this.y -= ((pointY + this.y) / this.zoomY) * scaleChangeY;
+			
+			//this.x -= pointX / ((this.zoomX * scaleX) - this.zoomX);
+			//this.y -= pointY / ((this.zoomY * scaleY) - this.zoomY);
+			
+			this.zoomX *= scaleX;
+			this.zoomY *= scaleY;*/
+			
+			context.translate(pointX, pointY);
+			context.scale(scaleX, scaleY);
+			context.translate(-pointX, -pointY);
+			
+			this.currentTransform.translateSelf(pointX, pointY);
+			this.currentTransform.scaleSelf(scaleX, scaleY);
+			this.currentTransform.translateSelf(-pointX, -pointY);
+			
+		}
 		
+		getTransform() {
+			return this.currentTransform;
+		}
+		
+		move(x, y) {
+			this.x += x;
+			this.y += y;
+		}
 	}
 	
 	/*
@@ -625,11 +864,12 @@ var MYLIB = {};
 	MYLIB.Circle = Circle;
 	MYLIB.Scene = Scene;
 	MYLIB.Text = Text;
-	MYLIB.Image = _Image;
+	MYLIB.Sprite = Sprite;
 	MYLIB.createCanvas = createCanvas;
 	MYLIB.setCanvas = setCanvas;
 	MYLIB.clear = clear;
+	MYLIB.switchScene = switchScene;
 	MYLIB.run = run;
 	MYLIB.pause = pause;
 	MYLIB.stop = stop;
-}).call();
+})();

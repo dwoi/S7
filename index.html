@@ -49,7 +49,9 @@
 	<div id="main">
 		<div id="viewport">
 			<canvas id="overlayCanvas"></canvas>
-			<canvas id="displayCanvas"></canvas>
+			<div id="background">
+				<canvas id="canvas"></canvas>
+			</div>
 			<div id="toolbar">
 				<span id="toolbarLeftButtons">
 					<button id="addButton">Add</button>
@@ -66,6 +68,7 @@
 					</label>
 					<input type="file" onchange="importFile()" id="importButton">
 					<button id="deleteButton" onclick="deleteObject()">Delete</button>
+					<button id="fullScreen" onclick="fullScreen()">fs</button>
 				</span>
 				
 				<span id="toolbarCentreButtons">
@@ -116,7 +119,13 @@
 	</div>
 	
 	<div id="confirmationMenu">
+		
+	</div>
 	
+	<div id="newMenu">
+		<!--menu for creating a new project-->
+		<input type="text">width</input>
+		<input type="text">height</input>
 	</div>
 	
 	<script src="mylibrary.js"></script>
@@ -125,24 +134,10 @@
 		"use strict";
 		
 		//set up canvas
-		var displayCanvas = document.getElementById("displayCanvas");
-		var displayCtx = displayCanvas.getContext('2d');
-		
-		displayCanvas.width = parseFloat(window.getComputedStyle(displayCanvas).getPropertyValue('width'));
-		displayCanvas.height = parseFloat(window.getComputedStyle(displayCanvas).getPropertyValue('height'));
-							   				   
-		var canvas = document.createElement('CANVAS');
-		canvas.width = displayCanvas.width;
-		canvas.height = displayCanvas.height;
+		var canvas = document.getElementById("canvas");
 		
 		var overlayCanvas = document.getElementById("overlayCanvas");
 		var overlayCtx = overlayCanvas.getContext('2d');
-		
-		overlayCanvas.style.width = canvas.width;
-		overlayCanvas.style.height = canvas.height;
-		
-		overlayCanvas.width = canvas.width;
-		overlayCanvas.height = canvas.height;
 		
 		const SELECTED_BACKGROUND_COLOR = "#3300FF";
 		const SELECTED_TEXT_COLOR = "#FFFFFF";
@@ -164,8 +159,25 @@
 		var objectSizeX;
 		var objectSizeY;
 		
-		var sceneOffsetX;
-		var sceneOffsetY;
+		var width = 500;
+		var height = 300;
+		
+		canvas.style.width = width;
+		canvas.style.height = height;
+		
+		canvas.width = width;
+		canvas.height = height;
+		
+		var bg = window.getComputedStyle(document.getElementById('background'));
+		
+		overlayCanvas.style.width = bg.getPropertyValue("width");
+		overlayCanvas.style.height = bg.getPropertyValue("height");
+		
+		overlayCanvas.width = bg.getPropertyValue("width").slice(0, -2);
+		overlayCanvas.height = bg.getPropertyValue("height").slice(0, -2);
+		
+		var sceneOffsetX = 0;
+		var sceneOffsetY = 0;
 		
 		var zoomX = 1;
 		var zoomY = 1;
@@ -187,12 +199,20 @@
 		var globalVariables = [];
 		var variableTimeout;
 		
+		var objects = [];
+		
 		var menusDisabled = false;
 		
 		var selectedImage;
 		var previewImg = document.getElementById("imagePreview");
 		
 		var savedImages = [];
+		
+		var newWindow;
+		
+		function setupCanvas(width, height) {
+			
+		}
 		
 		//Command Pattern system
 		
@@ -251,7 +271,7 @@
 				drawProperties();
 			}
 		}
-		
+
 		class ChangePropertyCommand {
 			constructor(object, property, origProp, newProp) {
 				this.object = object;
@@ -366,11 +386,7 @@
 		var circ = new MYLIB.Circle(350, 100, 60);
 		scene.add(circ);
 		
-		var rect2 = new MYLIB.Rectangle(50, 100, 100, 50);
 		
-		rect2.name = "fireRect";
-		rect2.fill = true;
-		rect2.fillColour = "#FF0000";
 		
 		var rect = new MYLIB.Rectangle(30, 300, 100, 50);
 		rect.rotation = 1;
@@ -383,6 +399,12 @@
 		//add that script
 		
 		var selectedObject = rect;
+		
+		var rect2 = new MYLIB.Rectangle(50, 100, 100, 50);
+		
+		rect2.name = "fireRect";
+		rect2.fill = true;
+		rect2.fillColour = "#FF0000";
 		
 		var selectedElement;
 		
@@ -397,9 +419,11 @@
 		text.rotation = 0;
 		scene.add(text);
 		
-		var image = new MYLIB.Image();
+		var image = new MYLIB.Sprite();
 		scene.add(image);
 		selectedObject = image;
+		
+		objects.push(image, text, rect, rect2, rect3, circ, scene);
 		
 		var activeScene = scene;
 		
@@ -453,6 +477,8 @@
 			new Property("width", 1, 1, "number", "width"),
 			new Property("height", 1, 1, "number", "height"),
 			new Property("radius", 1, 1, "number", "radius"), 
+			new Property("zoomX", 1, 1, "number", "X-Zoom"),
+			new Property("zoomY", 1, 1, "number", "Y-Zoom"),
 			new Property("rotation", 1, 1, "angle", "rotation"),
 			new Property("string", 3, 1, "text", "string"), 
 			new Property("fontSize", 1, 1, "number", "Font Size"),
@@ -592,9 +618,27 @@
 					break;
 				
 				case "text":
+					
+					//selectedObject[e.srcElement.property] = e.srcElement.value;
+					
+					
+					
+					for (var i=0;i<objects.length;i++) {
+						if (e.srcElement.value === objects[i].name) {
+							e.srcElement.style.backgroundColor = "#FF4444";
+							return "";
+						}
+					}
+					
+					if (!isLegalVariable(e.srcElement.value)) {
+						e.srcElement.style.backgroundColor = "#FF4444";
+						return "";
+					}
+					
+					e.srcElement.style.backgroundColor = "#FFFFFF";
+					
 					_history.run(new ChangePropertyCommand(selectedObject, e.srcElement.property, 
 						selectedObject[e.srcElement.property], e.srcElement.value));
-					//selectedObject[e.srcElement.property] = e.srcElement.value;
 					
 					if (e.srcElement.property === "name") {
 						if (selectedObject.isScene === true) {
@@ -946,7 +990,7 @@
 					var area = document.createElement("TEXTAREA");
 					area.id = "variableName";
 					area.className = "failAnimation";
-					area.type = "text";
+					//area.type = "text";
 					area.placeholder = "Variable Name";
 					area.value = variableName;
 					variableArea.id="";
@@ -1134,6 +1178,7 @@
 		function addObject(type) {
 			var temp = new MYLIB[type]();
 			activeScene.add(temp);
+			objects.push(temp);
 			selectObject(temp);
 			drawScene();
 			drawSceneOverview();
@@ -1162,54 +1207,39 @@
 		}
 		
 		function drawScene() {
+			canvas.style.left = sceneOffsetX + "px";
+			canvas.style.top = sceneOffsetY + "px";
+			canvas.style.backgroundColor = "white";
+			
 			MYLIB.clear();
-			
-			var xPos = activeScene.x;
-			var yPos = activeScene.y;
-			
-			activeScene.x = 0;
-			activeScene.y = 0;
 			
 			activeScene.draw();
 			
-			displayCtx.fillStyle = backgroundColour;
-			displayCtx.fillRect(0, 0, displayCanvas.width, displayCanvas.height);
-			
-			
-			
-			displayCtx.scale(zoomX, zoomY);
-			
-			//clear canvas
-			displayCtx.clearRect(xPos, yPos, displayCanvas.width, displayCanvas.height);
-			displayCtx.drawImage(canvas, xPos, yPos);
-			
-			displayCtx.setTransform(1, 0, 0, 1, 0, 0);
 			drawScaleOverlay();
-			
-			activeScene.x = xPos;
-			activeScene.y = yPos;
 		}
 		
-		overlayCanvas.addEventListener('wheel', function(e) {
-			var beforeX = zoomX;
-			var beforeY = zoomY;
+		//overlayCanvas.addEventListener('wheel', zoom);
+		
+		function zoom(e) {
+			e.preventDefault();
 			
-			var actualPosX = mousePosX + activeScene.x;
-			var actualPosY = mousePosY + activeScene.y;
+			var zoomAmount;
+			if (e.deltaY > 0) {
+				zoomAmount = 0.5;
+				//activeScene.zoom(0.5, 0.5, e.offsetX, e.offsetY);
+			} else {
+				zoomAmount = 2;
+				//activeScene.zoom(2, 2, e.offsetX, e.offsetY);
+			}
 			
-			console.log(e.deltaY);
+			activeScene.zoom(zoomAmount, zoomAmount, e.offsetX, e.offsetY);
+			zoomX *= zoomAmount;
+			zoomY *= zoomAmount;
 			
-			zoomX = Math.max(0, zoomX - e.deltaY/1000);
-			zoomY = Math.max(0, zoomY - e.deltaY/1000);
-			
-			//activeScene.x += mousePosX/2 * (zoomX - beforeX);
-			//activeScene.y += mousePosY/2 * (zoomY - beforeY);
-			
-			activeScene.x -= actualPosX/2 * zoomX;
-			activeScene.y -= actualPosY/2 * zoomY;
-			
+			drawProperties();
 			drawScene();
-		});
+		
+		}
 
 		textArea.addEventListener('keydown', function(e) {
 			if (e.key === "Tab") {
@@ -1221,25 +1251,29 @@
 			}
 		});
 		
-		document.addEventListener('keydown', function(e) {
+		document.addEventListener('keydown', keyDown);
+		
+		function keyDown(e) {
 			if (e.key === "z" && e.ctrlKey === true) {
 				_history.undo();
 			}
 			if (e.key === "y" && e.ctrlKey === true) {
 				_history.redo();
 			}
-		});
+		}
 		
 		document.addEventListener('mousedown', function(e) {
 			mouseDown = true;
 		});
 		
-		document.addEventListener('mouseup', function(e) {
+		document.addEventListener('mouseup', mouseRelease);
+		
+		function mouseRelease(e) {
 			mouseDown = false;
 			if (objectDragged === "object") {
 				_history.add(new ChangePositionCommand(selectedObject, objectPosX, objectPosY, selectedObject.x, selectedObject.y));
-			}
-			if (objectDragged !== true && objectDragged !== false) {
+			} else if (objectDragged !== true && objectDragged !== false && objectDragged !== "scene") {
+				
 				if (selectedObject.isRectangle === true) {
 					_history.add(new ChangeSizeCommand(selectedObject, objectSizeX, objectSizeY, selectedObject.width, 
 						selectedObject.height, objectPosX, objectPosY, selectedObject.x, selectedObject.y));
@@ -1254,14 +1288,17 @@
 			if (overlayCanvas.style.cursor === "-webkit-grabbing") {
 				overlayCanvas.style.cursor = "-webkit-grab";
 			}
-		});
+		}
 		
 		document.addEventListener('dragend', function(e) {
 			mouseDown = false;
 			objectDragged = "";
 		});
 		
-		overlayCanvas.addEventListener('mousedown', function(e) {
+		overlayCanvas.addEventListener('mousedown', mousePressed);
+		canvas.addEventListener('mousedown', mousePressed);
+		
+		function mousePressed(e) {
 			if (menusDisabled === false) {
 				var result = mouseOnOverlay(e.offsetX, e.offsetY);
 				
@@ -1269,6 +1306,9 @@
 					case true:
 						objectDragged = "object";
 						overlayCanvas.style.cursor = "-webkit-grabbing";
+						var parentDims = selectedObject.addParentProperties();
+						objectPosX = selectedObject.x + parentDims.x;
+						objectPosY = selectedObject.y + parentDims.y;
 						break;
 						
 					case false:
@@ -1276,11 +1316,11 @@
 						var descendents = activeScene.getAllDescendents();
 						var selectedSomething = false;
 						for (var i=0;i<descendents.length;i++) {
-							var dims = {x: descendents[i].x, y: descendents[i].y, rotation: descendents[i].rotation};
+							var dims = {x: descendents[i].x * zoomX, y: descendents[i].y * zoomY, rotation: descendents[i].rotation};
 							var parentDims = descendents[i].addParentProperties();
 							
-							dims.x += parentDims.x;
-							dims.y += parentDims.y;
+							dims.x += parentDims.x + sceneOffsetX * zoomX;
+							dims.y += parentDims.y + sceneOffsetY * zoomY;
 							dims.rotation += parentDims.rotation;
 							
 							var selected = false;
@@ -1288,16 +1328,17 @@
 							var objectWidth;
 							var objectHeight;
 							
-							if (descendents[i].isRectangle === true || descendents[i].isImage === true ||
+							if (descendents[i].isRectangle === true || descendents[i].isSprite === true ||
 								descendents[i].isText === true) {
+								
 								if (descendents[i].isText === true) {
-									objectWidth = descendents[i].getWidth();
-									objectHeight = descendents[i].getHeight();
+									objectWidth = descendents[i].getWidth() * zoomX;
+									objectHeight = descendents[i].getHeight() * zoomY;
 								}
 							
-								if (descendents[i].isRectangle === true || descendents[i].isImage === true) {
-									objectWidth = descendents[i].width;
-									objectHeight = descendents[i].height;
+								if (descendents[i].isRectangle === true || descendents[i].isSprite === true) {
+									objectWidth = descendents[i].width * zoomX;
+									objectHeight = descendents[i].height * zoomY;
 								}
 								
 								//rotate
@@ -1320,7 +1361,7 @@
 							}
 									
 							if (descendents[i].isCircle === true) {
-								if (Math.hypot(Math.abs(e.offsetX - dims.x), Math.abs(e.offsetY - dims.y)) <= descendents[i].radius) {
+								if (Math.hypot(Math.abs(e.offsetX - dims.x) * zoomX, Math.abs(e.offsetY - dims.y) * zoomY) <= descendents[i].radius) {
 									selected = true;
 								}
 							}
@@ -1336,17 +1377,16 @@
 						}
 						if (selectedSomething === false) {
 							selectObject(activeScene);
-							objectDragged = "object";
+							objectDragged = "scene";
 							overlayCanvas.style.cursor = "-webkit-grabbing";
 							selectedSomething = true;
-							objectPosX = activeScene;
-							objectPosY = activeScene;
+							
 						}
 						break;
 						
 					default:
 						objectDragged = result;
-						if (selectedObject.isRectangle === true || selectedObject.isImage === true) {
+						if (selectedObject.isRectangle === true || selectedObject.isSprite === true) {
 							objectSizeX = selectedObject.width;
 							objectSizeY = selectedObject.height;
 							objectPosX = selectedObject.x;
@@ -1368,8 +1408,7 @@
 
 				}
 			}
-			
-		});
+		}
 
 		function drawScaleOverlay() {
 			//using separate canvas for this
@@ -1390,31 +1429,31 @@
 			
 			
 			
-			var selectedDims = {x: selectedObject.x, y: selectedObject.y, rotation: selectedObject.rotation};
+			var selectedDims = {x: selectedObject.x * zoomX, y: selectedObject.y * zoomY, rotation: selectedObject.rotation};
 			var parentDims = selectedObject.addParentProperties();
 			
-			selectedDims.x += parentDims.x;
-			selectedDims.y += parentDims.y;
+			selectedDims.x += parentDims.x + sceneOffsetX * zoomX;
+			selectedDims.y += parentDims.y + sceneOffsetY * zoomY;
 			selectedDims.rotation += parentDims.rotation;
 			
 			if (selectedObject.rotationAngleMode === "DEG") {
 				selectedDims.rotation *= Math.PI / 180;
 			}
 			
-			if (selectedObject.isRectangle === true || selectedObject.isImage === true) {
-				selectedDims.width = selectedObject.width;
-				selectedDims.height = selectedObject.height;
+			if (selectedObject.isRectangle === true || selectedObject.isSprite === true) {
+				selectedDims.width = selectedObject.width * zoomX;
+				selectedDims.height = selectedObject.height * zoomY;
 			}
 			if (selectedObject.isCircle === true) {
-				selectedDims.x -= selectedObject.radius;
-				selectedDims.y -= selectedObject.radius;
-				selectedDims.width = selectedObject.radius * 2;
-				selectedDims.height = selectedObject.radius * 2;
+				selectedDims.x -= selectedObject.radius * zoomX;
+				selectedDims.y -= selectedObject.radius * zoomY;
+				selectedDims.width = selectedObject.radius * 2 * zoomX;
+				selectedDims.height = selectedObject.radius * 2 * zoomY;
 				
 			}
 			if (selectedObject.isText === true) {
-				selectedDims.width = selectedObject.getWidth();
-				selectedDims.height = selectedObject.getHeight();
+				selectedDims.width = selectedObject.getWidth() * zoomX;
+				selectedDims.height = selectedObject.getHeight() * zoomY;
 			}
 			
 			overlayCtx.translate(selectedDims.x + selectedDims.width/2,
@@ -1467,7 +1506,10 @@
 				width: selectedDims.width, height: selectedDims.height, rotation: selectedDims.rotation};
 		}
 		
-		overlayCanvas.addEventListener('mousemove', function(e) {
+		overlayCanvas.addEventListener('mousemove', mouseMove);
+		canvas.addEventListener('mousemove', mouseMove);
+		
+		function mouseMove(e) {
 			//again use offsetX and offsetY
 			if (menusDisabled === false) {
 				//remove selections so dragging isn't messed up
@@ -1488,7 +1530,7 @@
 				
 				var sameAxis = false;
 				
-				if (selectedObject.isRectangle === true || selectedObject.isImage === true) {
+				if (selectedObject.isRectangle === true || selectedObject.isSprite === true) {
 					dimX = "width";
 					dimY = "height";
 				}
@@ -1503,24 +1545,34 @@
 					sameAxis = true;
 				}
 				
+				var changeX = e.movementX / zoomX;
+				var changeY = e.movementY / zoomY;
+				
 				switch(objectDragged) {
 					case "object":
-						selectedObject.x += e.movementX;
-						selectedObject.y += e.movementY;
+						selectedObject.x += changeX;
+						selectedObject.y += changeY;
 						
 						drawScene();
 						drawProperties();
 						break;
 						
+					case "scene":
+						sceneOffsetX += changeX;
+						sceneOffsetY += changeY;
+						
+						drawScene();
+						break;
+						
 					case "topLeft":
 						var diff;
 
-						diff = Math.max(0, selectedObject[dimX] - e.movementX);
+						diff = Math.max(0, selectedObject[dimX] - changeX);
 						selectedObject.x -= diff - selectedObject[dimX];
 						selectedObject[dimX] = diff;
 						
 
-						diff = Math.max(0, selectedObject[dimY] - e.movementY);
+						diff = Math.max(0, selectedObject[dimY] - changeY);
 						selectedObject.y -= diff - selectedObject[dimY];
 						selectedObject[dimY] = diff;
 						
@@ -1529,7 +1581,7 @@
 						break;
 						
 					case "topCentre":
-						var diff = Math.max(0, selectedObject[dimY] - e.movementY);
+						var diff = Math.max(0, selectedObject[dimY] - changeY);
 						selectedObject.y -= diff - selectedObject[dimY];
 						selectedObject[dimY] = diff;
 						
@@ -1539,11 +1591,11 @@
 						
 					case "topRight":
 						if (sameAxis === false) {
-							selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
+							selectedObject[dimX] = Math.max(0, selectedObject[dimX] + changeX);
 						} else {
-							selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX/4);
+							selectedObject[dimX] = Math.max(0, selectedObject[dimX] + changeX/4);
 						}
-						var diff = Math.max(0, selectedObject[dimY] - e.movementY);
+						var diff = Math.max(0, selectedObject[dimY] - changeY);
 						selectedObject.y -= diff - selectedObject[dimY];
 						selectedObject[dimY] = diff;
 						
@@ -1552,7 +1604,7 @@
 						break;
 						
 					case "centreLeft":
-						var diff = Math.max(0, selectedObject[dimX] - e.movementX);
+						var diff = Math.max(0, selectedObject[dimX] - changeX);
 						selectedObject.x -= diff - selectedObject[dimX];
 						selectedObject[dimX] = diff;
 						
@@ -1562,31 +1614,31 @@
 						break;
 						
 					case "bottomLeft":
-						var diff = Math.max(0, selectedObject[dimX] - e.movementX);
+						var diff = Math.max(0, selectedObject[dimX] - changeX);
 						selectedObject.x -= diff - selectedObject[dimX];
 						selectedObject[dimX] = diff;
 						
-						selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
+						selectedObject[dimY] = Math.max(0, selectedObject[dimY] + changeY);
 						
 						drawScene();
 						drawProperties();
 						break;
 						
 					case "bottomCentre":
-						selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
+						selectedObject[dimY] = Math.max(0, selectedObject[dimY] + changeY);
 						drawScene();
 						drawProperties();
 						break;
 						
 					case "bottomRight":
-						selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
-						selectedObject[dimY] = Math.max(0, selectedObject[dimY] + e.movementY);
+						selectedObject[dimX] = Math.max(0, selectedObject[dimX] + changeX);
+						selectedObject[dimY] = Math.max(0, selectedObject[dimY] + changeY);
 						drawScene();
 						drawProperties();
 						break;
 					
 					case "centreRight":
-						selectedObject[dimX] = Math.max(0, selectedObject[dimX] + e.movementX);
+						selectedObject[dimX] = Math.max(0, selectedObject[dimX] + changeX);
 						drawScene();
 						drawProperties();	
 						break;
@@ -1630,7 +1682,7 @@
 						break;
 				}
 			}
-		});
+		}
 		
 		function mouseOnOverlay(mouseX, mouseY) {
 			
@@ -1702,6 +1754,152 @@
 			
 			function addText(object) {
 				j++;
+				var name = object.name;
+				exportDoc += "var " + name + 
+					" = new MYLIB." + object.constructor.name + "();\n";
+				
+				//make sure only set necessary things
+				var base = new object.constructor();
+				for (var k in object) {
+					if (base[k] !== object[k]) {
+						if (k === "children") {
+							for (var l=0;l<object.children.length;l++) {
+								var tempName = addText(object.children[l]);
+								exportDoc += name + ".add(" + tempName + ");\n";
+							}
+						} else if (k === "scripts") {
+							for (var m=0;m<object.scripts.length;m++) {
+								exportDoc += name + ".addScript(`" + object.scripts[m].code + "`, \"" + object.scripts[m].name + "\");\n";
+							}
+						} else if (k === "url") {
+							exportDoc += name + ".setImage('" + getBase64Image(object.image) + "');\n";
+						} else if (k !== "parent" && k !== "image" && k !== "loaded") {
+							if (typeof object[k] === "string") {
+								exportDoc += name + "." + k + " = \"" + object[k] + "\";\n";
+							} else {
+								exportDoc += name + "." + k + " = " + object[k] + ";\n";
+							}
+						}
+					}
+				}
+				return name;
+			}
+			return exportDoc;
+		}
+		
+		function getBase64Image(img) {
+			var baseCanvas = document.createElement("canvas");
+			baseCanvas.width = img.width;
+			baseCanvas.height = img.height;
+			var baseCtx = canvas.getContext("2d");
+			baseCtx.drawImage(img, 0, 0);
+			var dataURL = canvas.toDataURL("image/png");
+			return dataURL;
+		}
+		
+		function toDataURL(url) {
+			var xhr = new XMLHttpRequest();
+			xhr.onload = function() {
+				var reader = new FileReader();
+				reader.onloadend = function() {
+					return reader.result;
+				}
+				reader.readAsDataURL(xhr.response);
+			};
+			xhr.open('GET', url);
+			xhr.responseType = 'blob';
+			xhr.send();
+		}
+		
+		function exportFile() {
+			var content = produceDocument();
+			var fileName = "test.html";
+			
+			//download(fileName, content);
+			var element = document.createElement('a');
+			//element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
+			element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
+			element.setAttribute('download', fileName);
+		
+			element.style.display = 'none';
+			document.body.appendChild(element);
+		
+			element.click();
+		
+			document.body.removeChild(element);
+		}
+		
+		function readDocument(readDoc) {
+			//validateDocument();
+			//if (confirm("Your stuff will be overwritten")) {
+				//console.log(readDoc);
+				var newlineregex = RegExp("\n|;", "g");
+				var newlines = [];
+				var match;
+				
+				while (match = newlineregex.exec(readDoc)) {
+					newlines.push(match.index);
+				
+				}
+				for (var i=0;i<newlines.length;i++) {
+					if (i===0) {
+						var tempString = readDoc.substring(0, newlines[0]);
+					} else {
+						var tempString = readDoc.substring(newlines[i-1], newlines[i]);
+					}
+					if (tempString.indexOf("var") === 0) {
+						//
+					}
+				}
+				
+			//}
+		}
+		
+		function validateDocument(readDoc) {
+			//:/
+		}
+		
+		function importFile() {
+			var importfile = document.getElementById('importButton');
+			console.log(importfile.files);
+			var filereader = new FileReader();
+			filereader.readAsText(importfile.files[0]);
+			filereader.onload = function() {
+				console.log(filereader.result);
+				readDocument(filereader.result);
+			};
+		}
+		
+		function saveCurrentState() {
+			var str;
+			//use spaces to format everything
+			//global var = gv
+			for (var i=0;i<scenes.length;i++) {
+				
+			}
+			
+			for (var i=0;i<globalVariables.length;i++) {
+				exportDoc += "var " + globalVariables[i][0];
+				if (globalVariables[i][1] !== undefined && globalVariables[i][1] !== null) {
+					exportDoc += " = " + globalVariables[i][1] + ";\n";
+				} else {
+					exportDoc += ";\n";
+				}
+			}
+			
+			exportDoc += "MYLIB.createCanvas()\n";
+			
+			for (var i=0;i<scenes.length;i++) {
+				j=0;
+				addText(scenes[i]);
+			}
+			
+			exportDoc += "\</script\>\n";
+			exportDoc += "\</body\>\n";
+			exportDoc += "\</html\>\n";
+			
+			function addText(object) {
+				j++;
 				var name = object.constructor.name + i + j;
 				exportDoc += "var " + name + 
 					" = new MYLIB." + object.constructor.name + "();\n";
@@ -1719,7 +1917,9 @@
 							for (var m=0;m<object.scripts.length;m++) {
 								exportDoc += name + ".addScript(`" + object.scripts[m].code + "`, \"" + object.scripts[m].name + "\");\n";
 							}
-						} else if (k !== "parent") {
+						} else if (k === "url") {
+							exportDoc += name + ".setImage('" + getBase64Image(object.image) + "');\n";
+						} else if (k !== "parent" && k !== "image" && k !== "loaded") {
 							if (typeof object[k] === "string") {
 								exportDoc += object.constructor.name + i + j + "." + k + " = \"" + object[k] + "\";\n";
 							} else {
@@ -1731,61 +1931,6 @@
 				return name;
 			}
 			return exportDoc;
-		}
-		
-		function exportFile() {
-			var content = produceDocument();
-			var fileName = "test.html";
-			
-			//download(fileName, content);
-			var element = document.createElement('a');
-			element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
-			element.setAttribute('download', fileName);
-		
-			element.style.display = 'none';
-			document.body.appendChild(element);
-		
-			element.click();
-		
-			document.body.removeChild(element);
-		}
-		
-		function readDocument(readDoc) {
-			//validateDocument();
-			//if (confirm("Your stuff will be overwritten")) {
-				console.log(readDoc);
-				var newlineregex = RegExp("\n|;", "g");
-				var newlines = [];
-				var match;
-				
-				while (match = newlineregex.exec(readDoc)) {
-					newlines.push(match.index);
-				
-				}
-				for (var i=0;i<newlines.length;i++) {
-					if (i===0) {
-						var tempString = readDoc.substring(0, newlines[0]);
-					} else {
-						var tempString = readDoc.substring(newlines[i-1], newlines[i]);
-					}
-					
-				}
-				
-			//}
-		}
-		
-		function validateDocument(readDoc) {
-			//:/
-		}
-		
-		function importFile() {
-			var importfile = document.getElementById('importButton');
-			
-			var filereader = new FileReader();
-			filereader.readAsText(importfile.files[0]);
-			filereader.onload = function() {
-				readDocument(filereader.result);
-			};
 		}
 		
 		/*
@@ -1812,10 +1957,15 @@
 		function detachTextEditor() {
 			var myStyleSheet;
 			var screenWidth = screen.width, screenHeight = screen.height;
+			
+			var detachButton = document.getElementById('detachButton');
+			detachButton.innerHTML = "reattach";
+			detachButton.onclick = "reattachTextEditor()";
+			
 			newWindow = window.open("", "textEditWindow", "width=" + screenWidth + ", height=" + screenHeight + ", location=no, left=0");
 			newWindow.document.body.append(textArea);
 			newWindow.window.addEventListener('unload', function() {
-				console.log("Put text area back");
+				retachTextEditor();
 			});
 			newWindow.document.title = "Text Editor";
 			
@@ -1826,10 +1976,39 @@
 			myStyleSheet = document.createElement('style');
 			myStyleSheet.appendChild(document.createTextNode(""));
 			myStyleSheet.type = "text/css"
-			myStyleSheet.innerHTML = (`textarea { display: block; width: 100%; height: 100%;
-			box-sizing: border-box; resize: none;} body { margin: 0; border: 0;}`);
+			myStyleSheet.innerHTML = (`textarea { display: block; width: 100%; height: 80%;
+			box-sizing: border-box; resize: none;}
+			* { margin: 0; border: 0; padding: 0;}
+			button {background-color: buttonface; font-size: 20px; 
+			padding: 10px;}`);
 			
 			newWindow.document.head.appendChild(myStyleSheet);
+			
+			var toolbar = document.getElementById('textToolbar');
+			toolbar.parentElement.removeChild(toolbar);
+			newWindow.document.body.appendChild(toolbar);
+		}
+		
+		function reattachTextEditor() {
+			
+		}
+		
+		function fullScreen() {
+			var bg = document.getElementById("viewport");
+			//launchIntoFullscreen(bg);
+			
+			bg.addEventListener("webkitfullscreenchange", function() {
+				console.log("testo");
+			});
+			bg.addEventListener("webkitfullscreenerror", function(){
+				console.log("Full screen failed");
+			});
+			console.log(bg, bg.webkitRequestFullscreen);
+			bg.webkitRequestFullscreen();
+		}
+		
+		function normalSized() {
+			
 		}
 		
 		function increaseFontSize() {
@@ -1847,8 +2026,7 @@
 		
 		function play() {
 			if (menusDisabled === false) {
-				MYLIB.setCanvas(displayCanvas);
-				overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+				overlayCanvas.style.display = "none";
 				MYLIB.clear();
 				
 				for (var i=0;i<globalVariables.length;i++) {
@@ -1867,18 +2045,31 @@
 		}
 		
 		function pause() {
-			MYLIB.pause();
-			paused = true;
-			running = false;
+			if (running === true) {
+				MYLIB.pause();
+				paused = true;
+				running = false;
+			}
 		}
 		
 		function stop() {
 			MYLIB.stop();
-			MYLIB.setCanvas(canvas);
+			overlayCanvas.style.display = "block";
 			paused = false;
 			running = false;
 			drawScene();
 			enableMenus();
+		}
+		
+		function isLegalVariable(name) {
+			
+			if (/[^a-zA-Z0-9_]|^[0-9]/.test(name)) {
+				return false;
+			}
+			
+			//check reserved words?
+			
+			return true;
 		}
 		
 		function updateCode() {
