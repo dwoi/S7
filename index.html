@@ -222,11 +222,16 @@
 				this.history = [];
 			}
 			
+			save() {
+				window.localStorage.setItem("savedState", saveCurrentState());
+			}
+			
 			undo() {
 				if (this.history.length>0) {
 					this.history[this.history.length-1].undo();
 					this.undos.push(this.history.pop());
 				}
+				this.save();
 			}
 			
 			redo() {
@@ -234,17 +239,20 @@
 					this.undos[this.undos.length-1].run();
 					this.history.push(this.undos.pop());
 				}
+				this.save();
 			}
 			
 			run(command) {
 				command.run();
 				this.history.push(command);
 				this.redos = [];
+				this.save();
 			}
 			
 			add(command) {
 				this.history.push(command);
 				this.redos = [];
+				this.save();
 			}
 		}
 		
@@ -427,15 +435,24 @@
 		
 		var activeScene = scene;
 		
+		function loadSavedState() {
+			var saved = window.localStorage.getItem("savedState");
+			console.log(saved);
+			if (saved !== null && saved !== undefined && saved !== "") {
+				loadCurrentState(saved);
+			}
+		}
+		loadSavedState();
+		
 		var _history = new History();
 		
 		drawScene();
 		
 		//DEFINING PROPERTIES FOR EACH OBJECT
 		
-		var propertiesElement = document.getElementById('properties');
-		
 		function drawProperties() {
+		
+			var propertiesElement = document.getElementById('properties');
 			
 			updatePropertiesName();
 						
@@ -926,15 +943,18 @@
 		
 		function deleteScene() {
 			if (scenes.length > 0) {
-				for (var i=0;i<scenes.length;i++) {
-					if (scenes[i]===activeScene) {
-						scenes.remove(activeScene);
-						
-						activeScene = scenes[i-1];
-						break;
-					}
+				var i = scenes.indexOf(activeScene);
+				for (var j=0;j<activeScene.children.length;j++) {
+					delete activeScene.children[j];
 				}
+				scenes.splice(i, 1);
+				
+				activeScene = scenes[i-1];
+				selectObject(activeScene);
 			}
+			drawProjectOverview();
+			drawProperties();
+			drawScene();
 		}
 		
 		function getVariableValue(e) {
@@ -1147,8 +1167,10 @@
 		}
 		
 		function selectObject(object) {
-			selectedElement.style.backgroundColor = "white";
-			selectedElement.style.color = "black";
+			if (selectedElement) {
+				selectedElement.style.backgroundColor = "white";
+				selectedElement.style.color = "black";
+			}
 			selectedObject = object;
 			
 			drawProperties();
@@ -1847,8 +1869,12 @@
 					} else {
 						var tempString = readDoc.substring(newlines[i-1], newlines[i]);
 					}
-					if (tempString.indexOf("var") === 0) {
-						//
+					tempString = tempString.replace(/\s/g, "");
+					console.log(tempString);
+					if (tempString.indexOf("var") === 1) {
+						if (tempString.indexOf("Scene(")) {
+							
+						}
 					}
 				}
 				
@@ -1865,72 +1891,239 @@
 			var filereader = new FileReader();
 			filereader.readAsText(importfile.files[0]);
 			filereader.onload = function() {
-				console.log(filereader.result);
 				readDocument(filereader.result);
 			};
 		}
 		
-		function saveCurrentState() {
-			var str;
-			//use spaces to format everything
-			//global var = gv
-			for (var i=0;i<scenes.length;i++) {
+		function loadCurrentState(str) {
+			resetCurrent();
+			var lastIndex = 0;
+			var index = 0;
+			var currentScene;
+			var currentObject;
+			var child = false;
+			var ups = 0;
+			var property = null;
+			while (true) {
+				index = str.indexOf(" ", index);
+				if (index === -1) {
+					break;
+				}
+				var string = str.substring(lastIndex, index);
+				//console.log(index, lastIndex);
+				string = string.trim();
+				lastIndex = index;
+				//console.log(string);
+				switch(string) {
+					case "sc":
+						addNewScene();
+						break;
+					case "re":
+						newObject("Rectangle");
+						break;
+					case "ci":
+						newObject("Circle");
+						break;
+					case "sp":
+						newObject("Sprite");
+						break;
+					case "ba":
+						newObject("BaseObject");
+						break;
+					case "sc":
+						newObject("Script");
+						break;
+					case "te":
+						newObject("Text");
+						break;
+					case "gv":
+						
+						break;
+					case "ch":
+						child=true;
+						break;
+					case "up":
+						ups++;
+						break;
+					default:
+						if (property === null) {
+							property = string;
+						} else {
+							var tempObj = currentObject;
+							for (var i=0;i<ups;i++) {
+								tempObj = tempObj.parent;
+							}
+							string = string.trim();
+							if (!isNaN(parseFloat(string))) {
+								string = parseFloat(string);
+							}
+							if (string === "true") {
+								string = true;
+							}
+							if (string === "false") {
+								string = false;
+							}
+							console.log(property, string);
+							tempObj[property] = string;
+							property = null;
+						}
+						//console.log(currentObject, string, value);
+						
+				}
+				index++;
+			}
+			
+			function getNextSubString(index2) {
+				var newIndex = str.indexOf(" ", index+1);
+				var value = str.substring(index2, newIndex);
+				
+				if (value !== " ") {
+					value = value.trim();
+					if (!isNaN(parseFloat(value))) {
+						return parseFloat(value);
+					}
+					return value;
+				} else {
+					return getNextSubString(newIndex);
+				}
 				
 			}
 			
-			for (var i=0;i<globalVariables.length;i++) {
-				exportDoc += "var " + globalVariables[i][0];
-				if (globalVariables[i][1] !== undefined && globalVariables[i][1] !== null) {
-					exportDoc += " = " + globalVariables[i][1] + ";\n";
+			function newObject(type) {
+				var temp = new MYLIB[type]();
+				console.log(temp);
+				if (child === true) {
+					currentObject.add(temp);
+					child = false;
 				} else {
-					exportDoc += ";\n";
+					
+					var parentObj;
+					var tempObj;
+					if (currentObject.isScene) {
+						tempObj = currentObject;
+					} else {
+						tempObj = currentObject.parent;
+					}
+					
+					while (ups > 0) {
+						tempObj = tempObj.parent;
+						ups--;
+					}
+					console.log(tempObj, temp);
+					tempObj.add(temp);
 				}
+				objects.push(temp);
+				currentObject = temp;
 			}
 			
-			exportDoc += "MYLIB.createCanvas()\n";
+			function addNewScene() {
+				currentScene = new MYLIB.Scene();
+				currentObject = currentScene;
+				activeScene = currentScene;
+				scenes.push(currentScene);
+				selectObject(currentScene);
+			}
+			drawScene();
+			drawSceneOverview();
+			drawProperties();
+			drawProjectOverview();
+		}
+		
+		function saveCurrentState() {
+			var str = "";
+			//use spaces to format everything
+			//global var = gv
+			for (var i=0;i<globalVariables.length;i++) {
+				str += "gv " + globalVariables[i][0] + " " + globalVariables[i][1];
+			}
 			
+			//scene = sc
 			for (var i=0;i<scenes.length;i++) {
-				j=0;
-				addText(scenes[i]);
+				str += "sc ";
+				addProperties(scenes[i]);
 			}
 			
-			exportDoc += "\</script\>\n";
-			exportDoc += "\</body\>\n";
-			exportDoc += "\</html\>\n";
 			
-			function addText(object) {
-				j++;
-				var name = object.constructor.name + i + j;
-				exportDoc += "var " + name + 
-					" = new MYLIB." + object.constructor.name + "();\n";
+			//rect = re, circle = ci
+			//text = te, script = sc
+			//base = ba, shape = sh
+			//sprite = sp, 
+			
+			function addProperties(object) {
 				
 				//make sure only set necessary things
 				var base = new object.constructor();
 				for (var k in object) {
+					//debugger;
 					if (base[k] !== object[k]) {
 						if (k === "children") {
-							for (var l=0;l<object.children.length;l++) {
-								var tempName = addText(object.children[l]);
-								exportDoc += name + ".add(" + tempName + ");\n";
+							if (object.children.length > 0) {
+								console.log(object);
+								//ch for children
+								if (!object.isScene) {
+									str += "ch ";
+								}
+								
+								for (var l=0;l<object.children.length;l++) {
+									var type;
+									switch(object.children[l].constructor.name) {
+										case "Rectangle":
+											type = "re";
+											break;
+										case "Circle":
+											type = "ci";
+											break;
+										case "Text":
+											type = "te";
+											break;
+										case "Script":
+											type = "sc";
+											break;
+										case "Sprite":
+											type = "sp";
+											break;
+										case "BaseObject":
+											type = "ba";
+											break;
+										case "Shape":
+											type = "sh";
+											break;
+									}
+									str += type + " ";
+									addProperties(object.children[l]);
+									
+								}
+								console.log(object.children, base.children, object.children == base.children);
+								if (!object.isScene) {
+									str += "up ";
+								}
 							}
-						} else if (k === "scripts") {
-							for (var m=0;m<object.scripts.length;m++) {
-								exportDoc += name + ".addScript(`" + object.scripts[m].code + "`, \"" + object.scripts[m].name + "\");\n";
-							}
+							
 						} else if (k === "url") {
-							exportDoc += name + ".setImage('" + getBase64Image(object.image) + "');\n";
-						} else if (k !== "parent" && k !== "image" && k !== "loaded") {
-							if (typeof object[k] === "string") {
-								exportDoc += object.constructor.name + i + j + "." + k + " = \"" + object[k] + "\";\n";
-							} else {
-								exportDoc += object.constructor.name + i + j + "." + k + " = " + object[k] + ";\n";
-							}
+							
+							//exportDoc += name + ".setImage('" + getBase64Image(object.image) + "');\n";
+						} else if (k === "scripts") {
+
+						} else if (k !== "parent" && k !== "loaded") {
+							str += k + " " + object[k] + " ";
 						}
 					}
 				}
-				return name;
 			}
-			return exportDoc;
+			return str;
+		}
+		
+		function resetCurrent() {
+			for (var i=0;i<scenes.length;i++) {
+				delete scenes[i];
+			}
+			scenes = [];
+			activeScene = null;
+			objects = [];
+			for (var i=0;i<objects.length;i++) {
+				delete objects[i];
+			}
+			selectedObject = null;
 		}
 		
 		/*
@@ -2003,7 +2196,7 @@
 			bg.addEventListener("webkitfullscreenerror", function(){
 				console.log("Full screen failed");
 			});
-			console.log(bg, bg.webkitRequestFullscreen);
+			
 			bg.webkitRequestFullscreen();
 		}
 		
