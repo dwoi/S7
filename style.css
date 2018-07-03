@@ -281,6 +281,9 @@
 
 .properties {
 	font-size: 16px;
+}
+
+input {
 	border: 1px solid black;
 }
 
@@ -326,7 +329,7 @@
 	border: 1px solid black;
 }
 
-#menu {
+.menu {
 	position: absolute;
 	width: 70vw;
 	height: 70vh;
@@ -418,4 +421,73 @@ figure {
 
 #newMenu {
 	display: none;
+}
+
+#startMenu {
+	display: none;
+}
+
+#startUpper {
+	height: 20%;
+	width: 100%;
+	display: block;
+	border-bottom: 2px black solid;
+}
+
+#welcomeText {
+	font-size: 60px;
+	text-align: center;
+}
+
+#startMain {
+	height: 80%;
+	width: 100%;
+	display: block;
+}
+
+#newButton {
+	width: 100%;
+	height: 20%;
+	border-radius: 20px;
+	border: 1px black solid;
+}
+
+#newArea {
+	width: 30%;
+	height: 100%;
+	display: inline-block;
+	border-right: 2px black solid;
+}
+
+#newHeader {
+	width: 100%;
+	height: 20%;
+	border-bottom: 2px black solid;
+	display: block;
+}
+
+#newSettings {
+	width: 100%;
+	height: 80%;
+	display: block;
+}
+
+#existingArea {
+	width: 70%;
+	height: 100%;
+	display: block;
+	float: right;
+}
+
+#existingUpper {
+	height: 20%;
+}
+
+#existingText {
+	font-size: 30px;
+	text-align: center;
+}
+
+#existingBrowser {
+	height: 80%;
 }

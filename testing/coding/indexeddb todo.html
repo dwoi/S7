@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<style>
+
+ul {
+	list-style-type: circle;
+}
+
+</style>
+
+</head>
+<body>
+
+<ul id="todo-list">
+	
+</ul>
+
+
+<script>
+
+var todoDB = (function() {
+	var tDB = {};
+	var datastore = null;
+	
+	tDB.open = function(callback) {
+		
+		var version = 1;
+		
+		var request = indexedDB.open('todos', version);
+		
+		request.onupgradeneeded = function(e) {
+			var db = e.target.result;
+			
+			e.target.transaction.onerror = tDB.onerror;
+			
+			if (db.objectStoreNames.contains('todo')) {
+				db.deleteObjectStore('todo');
+			}
+			
+			var store = db.createObjectStore('todo', {
+				keyPath: 'timestamp'
+			});
+		};
+		
+		request.onsuccess = function(e) {
+			datastore = e.target.result;
+			
+			callback();
+		};
+		
+		request.onerror = tDB.onerror;
+		
+	};
+	
+	tDB.fetchTodos = function(callback) {
+		var db = datastore;
+		var transaction = db.transaction(['todo'], 'readwrite');
+		var objStore = transaction.objectStore('todo');
+		
+		var keyRange = IDBKeyRange.lowerBound(0);
+		var cursorRequest = objStore.openCursor(keyRange);
+		
+		var todos = [];
+		
+		transaction.oncomplete = function(e) {
+			callback(todos);
+		};
+		
+		cursorRequest.onsuccess = function(e) {
+			var result = e.target.result;
+			
+			if (!!result == false) {
+				return;
+			}
+			
+			todos.push(result.value);
+			
+			result.continue();
+		};
+		
+		cursorRequest.onerror = tDB.onerror;
+	};
+	
+	tDB.createTodo = function(text, callback) {
+		var db = datastore;
+		
+		var transaction = db.transaction(['todo'], 'readwrite');
+		
+		var objStore = transaction.objectStore('todo');
+		
+		var timestamp = new Date().getTime();
+		
+		var todo = {
+			'text': text,
+			'timestamp': timestamp
+		};
+		
+		var request = objStore.put(todo);
+		
+		request.onsuccess = function(e) {
+			callback(todo);
+		};
+		
+		request.onerror = tDB.onerror;
+	};
+	
+	tDB.deleteTodo = function(id, callback) {
+		var db = datastore;
+		var transaction = db.transaction(['todo'], 'readwrite');
+		var objStore = transaction.objectStore('todo');
+	
+		var request = objStore.delete(id);
+	
+		request.onsuccess = function(e) {
+			callback();
+		}
+	
+		request.onerror = function(e) {
+			console.log(e);
+		}
+	};
+	
+	return tDB;
+}());
+
+window.onload = function() {
+	todoDB.open(refreshTodos);
+}
+
+function addTodo(value) {
+	var list = document.getElementById("todo-list");
+	
+	todoDB.createTodo(value, function(todo) {
+        refreshTodos();
+    });
+}
+
+function refreshTodos() {
+	todoDB.fetchTodos(function(todos) {
+		var todoList = document.getElementById('todo-list');
+		todoList.innerHTML = '';
+
+		for(var i = 0; i < todos.length; i++) {
+			// Read the todo items backwards (most recent first).
+			var todo = todos[(todos.length - 1 - i)];
+		
+			var li = document.createElement('li');
+			li.id = 'todo-' + todo.timestamp;
+			var checkbox = document.createElement('input');
+			checkbox.type = "checkbox";
+			checkbox.className = "todo-checkbox";
+			checkbox.setAttribute("data-id", todo.timestamp);
+		
+			li.appendChild(checkbox);
+		
+			var span = document.createElement('span');
+			span.innerHTML = todo.text;
+		
+			li.appendChild(span);
+		
+			todoList.appendChild(li);
+		
+			// Setup an event listener for the checkbox.
+			checkbox.addEventListener('click', function(e) {
+				var id = parseInt(e.target.getAttribute('data-id'));
+				todoDB.deleteTodo(id, refreshTodos);
+			});
+		}
+
+	});
+}
+
+
+</script>
+</body>
+</html>

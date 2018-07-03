@@ -100,7 +100,7 @@
 		</div>
 	</div>
 	
-	<div id="menu">
+	<div id="imageMenu" class="menu">
 		<div id="imageBrowser">
 			
 		</div>
@@ -118,14 +118,45 @@
 		</div>
 	</div>
 	
-	<div id="confirmationMenu">
+	<div id="confirmationMenu" class="menu">
 		
 	</div>
 	
-	<div id="newMenu">
+	<div id="startMenu" class="menu">
+		<div id="startUpper">
+			<h1 id="welcomeText">Welcome</h1>
+		</div>
+		<div id="startMain">
+			<div id="newArea">
+				<button id="newButton">New Project</button>
+				
+			</div>
+			<div id="existingArea">
+				
+				<div id="existingUpper">
+					<h2 id="existingText">Existing Projects:</h2>
+				</div>
+				
+				<div id="existingBrowser">
+					
+				</div>
+				
+			</div>
+		</div>
+	</div>
+	
+	<div id="newMenu" class="menu">
 		<!--menu for creating a new project-->
-		<input type="text">width</input>
-		<input type="text">height</input>
+		<div id="newHeader">
+			<img src="backImg.png" alt="Go back">
+			<h1>New Project</h1>
+		</div>
+		<div id="newSettings">
+			<span>width: </span><input type="text">
+			<span>height: </span><input type="text">
+			<span>Autosize: </span><input type="checkbox">
+			<span>Constrain proportions: </span><input type="checkbox">
+		</div>
 	</div>
 	
 	<script src="mylibrary.js"></script>
@@ -208,6 +239,10 @@
 		
 		var savedImages = [];
 		
+		var currentStoreName;
+		
+		var database;
+		
 		var newWindow;
 		
 		function setupCanvas(width, height) {
@@ -222,16 +257,11 @@
 				this.history = [];
 			}
 			
-			save() {
-				window.localStorage.setItem("savedState", saveCurrentState());
-			}
-			
 			undo() {
 				if (this.history.length>0) {
 					this.history[this.history.length-1].undo();
 					this.undos.push(this.history.pop());
 				}
-				this.save();
 			}
 			
 			redo() {
@@ -239,20 +269,17 @@
 					this.undos[this.undos.length-1].run();
 					this.history.push(this.undos.pop());
 				}
-				this.save();
 			}
 			
 			run(command) {
 				command.run();
 				this.history.push(command);
 				this.redos = [];
-				this.save();
 			}
 			
 			add(command) {
 				this.history.push(command);
 				this.redos = [];
-				this.save();
 			}
 		}
 		
@@ -394,8 +421,6 @@
 		var circ = new MYLIB.Circle(350, 100, 60);
 		scene.add(circ);
 		
-		
-		
 		var rect = new MYLIB.Rectangle(30, 300, 100, 50);
 		rect.rotation = 1;
 		scene.add(rect);
@@ -435,24 +460,15 @@
 		
 		var activeScene = scene;
 		
-		function loadSavedState() {
-			var saved = window.localStorage.getItem("savedState");
-			console.log(saved);
-			if (saved !== null && saved !== undefined && saved !== "") {
-				loadCurrentState(saved);
-			}
-		}
-		loadSavedState();
-		
 		var _history = new History();
 		
 		drawScene();
 		
 		//DEFINING PROPERTIES FOR EACH OBJECT
 		
-		function drawProperties() {
+		var propertiesElement = document.getElementById('properties');
 		
-			var propertiesElement = document.getElementById('properties');
+		function drawProperties() {
 			
 			updatePropertiesName();
 						
@@ -1041,7 +1057,7 @@
 		}
 		
 		function drawImageMenu() {
-			var menu = document.getElementById("menu");
+			var menu = document.getElementById("imageMenu");
 			menu.style.display = "block";
 			disableMenus();
 			drawBrowser();
@@ -1050,7 +1066,7 @@
 		function loadImage() {
 			selectedObject.setImage(selectedImage[0]);
 			selectedObject.url = selectedImage[1];
-			var menu = document.getElementById("menu");
+			var menu = document.getElementById("imageMenu");
 			menu.style.display = "none";
 			enableMenus();
 			if (selectedObject.loaded === true) {
@@ -1167,10 +1183,8 @@
 		}
 		
 		function selectObject(object) {
-			if (selectedElement) {
-				selectedElement.style.backgroundColor = "white";
-				selectedElement.style.color = "black";
-			}
+			selectedElement.style.backgroundColor = "white";
+			selectedElement.style.color = "black";
 			selectedObject = object;
 			
 			drawProperties();
@@ -1903,7 +1917,6 @@
 			var currentObject;
 			var child = false;
 			var ups = 0;
-			var property = null;
 			while (true) {
 				index = str.indexOf(" ", index);
 				if (index === -1) {
@@ -1925,7 +1938,7 @@
 						newObject("Circle");
 						break;
 					case "sp":
-						newObject("Sprite");
+						newObject("Rectangle");
 						break;
 					case "ba":
 						newObject("BaseObject");
@@ -1933,42 +1946,26 @@
 					case "sc":
 						newObject("Script");
 						break;
-					case "te":
-						newObject("Text");
-						break;
 					case "gv":
 						
 						break;
 					case "ch":
+						//add stuff for children
 						child=true;
+						/*var nextObj = getNextSubString(index);
+						console.log(nextObj);
+						var temp = new MYLIB[nextObj]();
+						currentObject.add(temp);
+						objects.push(temp);
+						currentObject = temp;*/
 						break;
 					case "up":
 						ups++;
 						break;
 					default:
-						if (property === null) {
-							property = string;
-						} else {
-							var tempObj = currentObject;
-							for (var i=0;i<ups;i++) {
-								tempObj = tempObj.parent;
-							}
-							string = string.trim();
-							if (!isNaN(parseFloat(string))) {
-								string = parseFloat(string);
-							}
-							if (string === "true") {
-								string = true;
-							}
-							if (string === "false") {
-								string = false;
-							}
-							console.log(property, string);
-							tempObj[property] = string;
-							property = null;
-						}
+						var value = getNextSubString(index);
 						//console.log(currentObject, string, value);
-						
+						currentObject[string] = value;
 				}
 				index++;
 			}
@@ -1991,25 +1988,19 @@
 			
 			function newObject(type) {
 				var temp = new MYLIB[type]();
-				console.log(temp);
 				if (child === true) {
 					currentObject.add(temp);
 					child = false;
 				} else {
-					
+					console.log(ups);
 					var parentObj;
-					var tempObj;
-					if (currentObject.isScene) {
-						tempObj = currentObject;
-					} else {
-						tempObj = currentObject.parent;
-					}
+					var tempObj = currentObject.parent;
 					
 					while (ups > 0) {
 						tempObj = tempObj.parent;
 						ups--;
 					}
-					console.log(tempObj, temp);
+					console.log(tempObj);
 					tempObj.add(temp);
 				}
 				objects.push(temp);
@@ -2027,6 +2018,45 @@
 			drawSceneOverview();
 			drawProperties();
 			drawProjectOverview();
+		}
+		
+		function saveCurrentState2() {
+			
+		}
+		
+		//database structure:
+		//db->tables/stores = each project -> {scenes, global variables, metadata}
+		
+		function openDB() {
+			var databaseName = "projects";
+			
+			var storeName;
+			
+			var database;
+			
+			var openRequest = indexeddb.open(databaseName);
+			
+			openRequest.onupgradeneeded = function(e) {
+				database = e.target.result;
+				
+				var store = database.createObjectStore(storeName, {keyPath: 'id', autoIncrement: true });
+				
+				store.createIndex("scenes", "scenes");
+				store.createIndex("globalVariables", "globalVariables");
+				store.createIndex("metadata", "metadata");
+			}
+			
+			//update current objectstore
+			openRequest.onsuccess = function(e) {
+				db = this.result;
+				
+			}
+			
+			openRequest.onerror = function(e) {
+				console.error(databaseName, e.target.errorCode);
+			};
+			
+			dbVersion += 1;
 		}
 		
 		function saveCurrentState() {
@@ -2054,7 +2084,6 @@
 				//make sure only set necessary things
 				var base = new object.constructor();
 				for (var k in object) {
-					//debugger;
 					if (base[k] !== object[k]) {
 						if (k === "children") {
 							if (object.children.length > 0) {
@@ -2331,6 +2360,10 @@
 			
 			textArea.readOnly = false;
 			textArea.disabled = false;
+		}
+		
+		window.onload = function() {
+		
 		}
 		
 	</script>

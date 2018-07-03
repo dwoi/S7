@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<table>
+
+<script>
+
+var request = indexedDB.open("test2", 1);
+var database;
+
+// This is what our customer data looks like.
+const customerData = [
+  { ssn: "444-44-4444", name: "Bill", age: 35, email: "bill@company.com" },
+  { ssn: "555-55-5555", name: "Donna", age: 32, email: "donna@home.org" }
+];
+
+request.onsuccess = function(e) {
+	database = e.target.result;
+	console.log("Database succeeded", database);
+}
+
+request.onerror = function(e) {
+	console.error(e.target.errorCode);
+}
+
+request.onupgradeneeded = function(e) {
+	database = e.target.result;
+	
+	//1st parameter is name of table/objectstore
+	var objectStore = database.createObjectStore("customers", {keyPath: "ssn"});
+	
+	objectStore.createIndex("name", "name", { unique: false });
+	
+	objectStore.createIndex("email", "email", {unique: true });
+	
+	objectStore.transaction.oncomplete = function(e) {
+		var customerObjectStore = database.transaction("customers", "readwrite").objectStore("customers");
+		customerData.forEach(function(customer) {
+			customerObjectStore.add(customer);
+		});
+	}
+}
+
+function getRecord(tableName, recordIndex) {
+	var transaction = database.transaction(["customers"], "readonly");
+	
+	transaction.onsuccess = function(e) {
+		console.log(e);
+	}
+	
+	transaction.onerror = function(e) {
+		console.log(e);
+	}
+	
+	transaction.oncomplete = function(e) {
+		console.log("complete, ", e);
+	}
+	
+	var objectStore = transaction.objectStore("customers");
+	
+	var objectStoreRequest = objectStore.get("ssn");
+	
+	objectStoreRequest.onsuccess = function(e) {
+		var index = objectStore.index(recordIndex);
+		index.openCursor(null, 'prev');
+		
+		console.log("request success", e);
+		
+		console.log(e.target.result, e.target.result.value);
+		
+		console.log("record: " + objectStoreRequest.result);
+	}
+	
+	
+}
+
+function displayData2() {
+	var transaction = database.transaction(["customers"], "readonly");
+	var objectStore = transaction.objectStore("customers");
+	
+	objectStore.openCursor().onsuccess = function(e) {
+		var cursor = e.target.result;
+		if (cursor) {
+			console.log(cursor.value);
+			cursor.continue();
+		} else {
+			console.log("Displayed entries");
+		}
+	}
+	return "hi";
+}
+
+</script>
+</body>
+</html>

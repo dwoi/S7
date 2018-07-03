@@ -44,6 +44,12 @@ var MYLIB = {};
 	
 	function setup(scene) {
 		
+		for (var i=0;i<nameOfFunctions.length;i++) {
+			if (!functionList[nameOfFunctions[i]]) {
+				functionList[nameOfFunctions[i]] = [];
+			}
+		}
+		
 		//parse all scripts
 		if (scene !== undefined) {
 			for (var i=0;i<scene.scripts.length;i++) {
@@ -189,12 +195,6 @@ var MYLIB = {};
 		}
 		initStr += ";";
 		returnStr += "};//# sourceURL=" + script.name;
-		
-		for (var i=0;i<nameOfFunctions.length;i++) {
-			if (!functionList[nameOfFunctions[i]]) {
-				functionList[nameOfFunctions[i]] = [];
-			}
-		}
 		
 		//run through code and add functions
 		var functions = (new Function(initStr + script.code + returnStr))();
