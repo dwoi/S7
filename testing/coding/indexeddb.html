@@ -30,8 +30,7 @@
 		
 		var objectData = {data: [
 			rect,
-			circle,
-			test
+			circle
 		], metadata: "test"};
 		
 		
@@ -52,7 +51,7 @@
 				console.warn('This browser doesn\'t support IndexedDB');
 			}
 
-			var request = window.indexedDB.open('TestDatabase', 11);
+			var request = window.indexedDB.open('TestDatabase', 19);
 			
 			request.onerror = function(e) {
 				console.log(e);
@@ -65,24 +64,20 @@
 				
 				//db.deleteObjectStore("objects");
 				db.deleteObjectStore("objects");
-				var objectStore = db.createObjectStore("objects", { keyPath: "id", autoIncrement: true });
+				var objectStore = db.createObjectStore("objects", { autoIncrement: true });
 				
-				objectStore.transaction.oncomplete = function(e) {
-					var objectObjectStore = db.transaction("objects", "readwrite").objectStore("objects");
-					objectData.forEach(function(object) {
-						objectObjectStore.add(object);
-					});
-				};
 			};
 			
 			request.onsuccess = function(e) {
 				console.log("success");
 				db = e.target.result;
 				
-				clearData();
+				//clearData();
 				
 				var trans = db.transaction("objects", "readwrite");
 				var objStore = trans.objectStore("objects");
+				
+				
 				
 				/*objStore.openCursor().onsuccess = function(e) {
 					var cursor = e.target.result;
@@ -100,8 +95,15 @@
 				}*/
 				
 				objectData.data.forEach(function(object, index) {
-					objStore.put(object);
+					console.log(index);
+					objStore.put(object, index);
 				});
+				
+				var request2 = objStore.getAll();
+				
+				request2.onsuccess = function(e) {
+					console.log(e.target.result);
+				};
 				
 				//getData();
 				
@@ -151,7 +153,6 @@
 					for (var k in temp) {
 						newTemp[k] = temp[k];
 					}
-					delete newTemp.id;
 					console.log(newTemp);
 					newTemp.draw();
 					cursor.continue();

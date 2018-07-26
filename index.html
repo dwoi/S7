@@ -58,8 +58,9 @@
 					<div id="dropdownAddButtons">
 						<button class="addObjectButton" id="addRect" onclick="addObject('Rectangle')">Add Rectangle</button>
 						<button class="addObjectButton" id="addCircle" onclick="addObject('Circle')">Add Circle</button>
+						<button class="addObjectButton" id="addEllipse" onclick="addObject('Ellipse')">Add Ellipse</button>
 						<button class="addObjectButton" id="addText" onclick="addObject('Text')">Add Text</button>
-						<button class="addObjectButton" id="addImage" onclick="addObject('Image')">Add Image</button>
+						<button class="addObjectButton" id="addSprite" onclick="addObject('Sprite')">Add Sprite</button>
 						
 					</div>
 					<button onclick="exportFile()" id="exportButton">Export</button>
@@ -68,7 +69,7 @@
 					</label>
 					<input type="file" onchange="importFile()" id="importButton">
 					<button id="deleteButton" onclick="deleteObject()">Delete</button>
-					<button id="fullScreen" onclick="fullScreen()">fs</button>
+					<button id="fullScreen" onclick="changeFullscreen()">fullscreen</button>
 				</span>
 				
 				<span id="toolbarCentreButtons">
@@ -80,7 +81,7 @@
 				</span>
 				
 				<span id="coords">
-					text
+					Co-ords
 				</span>
 				
 				<!--<span id="toolbarRightButtons">
@@ -89,7 +90,7 @@
 			</div>
 		</div><!--Using a comment to remove whitespace
 		--><div id="textEditor">
-			<textarea spellcheck="false" oninput="updateCode()" id="textArea"></textarea>
+			<textarea spellcheck="false" id="textArea"></textarea>
 			<div id="textToolbar">
 				<button onclick="detachTextEditor()" class="textButtons" id="detachButton">Detach</button>
 				<button onclick="increaseFontSize()" class="textButtons" id="increaseSizeButton">Size +</button>
@@ -128,7 +129,7 @@
 		</div>
 		<div id="startMain">
 			<div id="newArea">
-				<button id="newButton">New Project</button>
+				<button id="newButton" onclick="showNewProject()">New Project</button>
 				
 			</div>
 			<div id="existingArea">
@@ -148,14 +149,18 @@
 	<div id="newMenu" class="menu">
 		<!--menu for creating a new project-->
 		<div id="newHeader">
-			<img src="backImg.png" alt="Go back">
-			<h1>New Project</h1>
+			<img onclick="showStartMenu()" id="backArrow" src="backImg.svg" alt="Go back">
+			<h1 id="newText">New Project</h1>
 		</div>
-		<div id="newSettings">
-			<span>width: </span><input type="text">
-			<span>height: </span><input type="text">
-			<span>Autosize: </span><input type="checkbox">
-			<span>Constrain proportions: </span><input type="checkbox">
+		<div id="newSettings"><br>
+			<span>Width: </span><input value="500" id="newWidth" type="text"><span>px</span><br><br>
+			<span>Height: </span><input value="300" id="newHeight" type="text"><span>px</span><br><br>
+			<span title="Always expands to fill maximum area available.">Autosize: </span><input id="newAutoSize" type="checkbox"><br><br>
+			<span title="Expands to fill space but keeps ratio of width and height.">Constrain proportions: </span><input id="newConstrain" type="checkbox"><br><br>
+			
+			<span>Project Name: </span><input value="Untitled Project" id="newProjectName" type="text"><br><br>
+			
+			<button id="newProjectButton" onclick="newProject()">Create New Project</button>
 		</div>
 	</div>
 	
@@ -172,9 +177,8 @@
 		
 		const SELECTED_BACKGROUND_COLOR = "#3300FF";
 		const SELECTED_TEXT_COLOR = "#FFFFFF";
-
-		var textArea = document.getElementById('textArea');
-		textArea.value = `function start() {\n    \n}\n\nfunction update() {\n    this.x += 1;\n}`;
+		
+		const databaseName = "projects";//NOTE CHANGE LATER WHEN PROJECT GETS NAME
 		
 		var points = {};
 		var squareSize;
@@ -189,23 +193,6 @@
 		
 		var objectSizeX;
 		var objectSizeY;
-		
-		var width = 500;
-		var height = 300;
-		
-		canvas.style.width = width;
-		canvas.style.height = height;
-		
-		canvas.width = width;
-		canvas.height = height;
-		
-		var bg = window.getComputedStyle(document.getElementById('background'));
-		
-		overlayCanvas.style.width = bg.getPropertyValue("width");
-		overlayCanvas.style.height = bg.getPropertyValue("height");
-		
-		overlayCanvas.width = bg.getPropertyValue("width").slice(0, -2);
-		overlayCanvas.height = bg.getPropertyValue("height").slice(0, -2);
 		
 		var sceneOffsetX = 0;
 		var sceneOffsetY = 0;
@@ -222,6 +209,8 @@
 		
 		var running = false;
 		var paused = false;
+		
+		var fullscreen = false;
 		
 		var menuUp = false;
 		
@@ -243,63 +232,162 @@
 		
 		var database;
 		
+		var selectedProject;
+		
+		var projectName;
+		
 		var newWindow;
 		
-		function setupCanvas(width, height) {
+		var textEditor = document.getElementById("textEditor");
+		
+		var textArea = document.getElementById("textArea");
+		
+		var scriptElement = document.getElementById("scriptSelect");
+		
+		textArea.addEventListener("input", updateCode);
+		
+		//note width/height are only needed for resize(),
+		//ratio is only needed for constrain
+		var canvasWidth, canvasHeight, canvasRatio;
+		
+		var canvasMode;
+		
+		//setupCanvas(0, 0, "autosize");
+		
+		showStartMenu();
+		
+		function setupCanvas(width, height, mode) {
+		
+			var bg = window.getComputedStyle(document.getElementById('background'));
 			
+			overlayCanvas.style.width = bg.getPropertyValue("width");
+			overlayCanvas.style.height = bg.getPropertyValue("height");
+			
+			overlayCanvas.width = bg.getPropertyValue("width").slice(0, -2);
+			overlayCanvas.height = bg.getPropertyValue("height").slice(0, -2);
+			
+			if (!mode) {
+				canvasMode = "sized";
+			} else {
+				canvasMode = mode;
+			}
+			
+			if (mode === "constrain") {
+				window.addEventListener("resize", resizeConstrain);
+				canvasRatio = height / width;
+				console.log(height, width, canvasRatio);
+				resizeConstrain();
+			} else if (mode === "autosize") {
+				window.addEventListener("resize", resizeAutosize);
+				resizeAutosize();
+			} else {
+				window.addEventListener("resize", resize);
+				canvasWidth = width;
+				canvasHeight = height;
+				resize();
+			}
+			
+		}
+		
+		function resize() {
+			
+			canvas.style.width = canvasWidth + "px";
+			canvas.style.height = canvasHeight + "px";
+			
+			canvas.width = canvasWidth;
+			canvas.height = canvasHeight;
+			
+			drawScene();
+		}
+		
+		function resizeConstrain() {
+			var bg = window.getComputedStyle(document.getElementById('background'));
+			var maxWidth = parseInt(bg.getPropertyValue("width").slice(0, -2));
+			var maxHeight = parseInt(bg.getPropertyValue("height").slice(0, -2));
+			
+			if (maxWidth * canvasRatio < maxHeight) {
+				var width = maxWidth;
+				var height = maxWidth * canvasRatio;
+			} else {
+				var height = maxHeight;
+				var width = maxHeight / canvasRatio;
+			}
+			
+			canvas.style.width = width + "px";
+			canvas.style.height = height + "px";
+			
+			canvas.width = width;
+			canvas.height = height;
+			
+			drawScene();
+		}
+		
+		function resizeAutosize() {
+			var bg = window.getComputedStyle(document.getElementById('background'));
+			
+			var width = bg.getPropertyValue("width");
+			var height = bg.getPropertyValue("height");
+			
+			canvas.style.width = width;
+			canvas.style.height = height;
+			
+			canvas.width = width.slice(0, -2);
+			canvas.height = height.slice(0, -2);
+			
+			drawScene();
 		}
 		
 		//Command Pattern system
 		
-		class History {
-			constructor() {
-				this.undos = [];
-				this.history = [];
-			}
+		function History() {
+			this.undos = [];
+			this.history = [];
 			
-			undo() {
+			this.undo = function() {
 				if (this.history.length>0) {
 					this.history[this.history.length-1].undo();
 					this.undos.push(this.history.pop());
 				}
+				saveCurrentState2();
 			}
 			
-			redo() {
+			this.redo = function() {
 				if (this.undos.length>0) {
 					this.undos[this.undos.length-1].run();
 					this.history.push(this.undos.pop());
 				}
+				saveCurrentState2();
 			}
 			
-			run(command) {
+			this.run = function(command) {
 				command.run();
 				this.history.push(command);
 				this.redos = [];
+				saveCurrentState2();
 			}
 			
-			add(command) {
+			this.add = function(command) {
 				this.history.push(command);
 				this.redos = [];
+				saveCurrentState2();
 			}
 		}
 		
-		class ChangePositionCommand {
-			constructor(object, origPosX, origPosY, newPosX, newPosY) {
-				this.object = object;
-				this.origPosX = origPosX;
-				this.origPosY = origPosY;
-				this.newPosX = newPosX;
-				this.newPosY = newPosY;
-			}
+		function ChangePositionCommand (object, origPosX, origPosY, newPosX, newPosY) {
+			this.object = object;
+			this.origPosX = origPosX;
+			this.origPosY = origPosY;
+			this.newPosX = newPosX;
+			this.newPosY = newPosY;
 			
-			undo() {
+			this.undo = function() {
 				this.object.x = this.origPosX;
 				this.object.y = this.origPosY;
 				drawScene();
 				drawProperties();
 			}
 			
-			run() {
+			this.run = function() {
 				this.object.x = this.newPosX;
 				this.object.y = this.newPosY;
 				drawScene();
@@ -307,41 +395,38 @@
 			}
 		}
 
-		class ChangePropertyCommand {
-			constructor(object, property, origProp, newProp) {
-				this.object = object;
-				this.property = property;
-				this.origProp = origProp;
-				this.newProp = newProp;
-			}
+		function ChangePropertyCommand(object, property, origProp, newProp) {
+			this.object = object;
+			this.property = property;
+			this.origProp = origProp;
+			this.newProp = newProp;
 			
-			undo() {
+			this.undo = function() {
 				this.object[this.property] = this.origProp;
 				drawScene();
 				//drawProperties();
 			}
 			
-			run() {
+			this.run = function() {
 				this.object[this.property] = this.newProp;
 				drawScene();
 				//drawProperties();
 			}
 		}
 		
-		class ChangeHierachyCommand {
-			constructor(object, oldParent, newParent, element,
+		function ChangeHierachyCommand(object, oldParent, newParent, element,
 			oldParentEle, newParentEle, oldIndex, newIndex) {
-				this.object = object;
-				this.oldParent = oldParent;
-				this.newParent = newParent;
-				this.element = element;
-				this.oldParentEle = oldParentEle;
-				this.newParentEle = newParentEle;
-				this.oldIndex = oldIndex;
-				this.newIndex = newIndex;
-			}
 			
-			run() {
+			this.object = object;
+			this.oldParent = oldParent;
+			this.newParent = newParent;
+			this.element = element;
+			this.oldParentEle = oldParentEle;
+			this.newParentEle = newParentEle;
+			this.oldIndex = oldIndex;
+			this.newIndex = newIndex;
+			
+			this.run = function() {
 				this.newParent.add(this.object);
 				this.newParentEle.appendChild(this.element);
 				if (this.newParent.isScene === true) {
@@ -353,7 +438,7 @@
 				drawScene();
 			}
 			
-			undo() {
+			this.undo = function() {
 				this.oldParent.add(this.object);
 				this.oldParentEle.appendChild(this.element);
 				if (this.oldParent.isScene === true) {
@@ -366,32 +451,35 @@
 			}
 		}
 		
-		class ChangeSizeCommand {
-			constructor(object, oldWidth, oldHeight, newWidth, newHeight, oldX, oldY, newX, newY) {
-				this.object = object;
-				if (object.isRectangle === true) {
-					this.propertyX = "width";
-					this.propertyY = "height";
-				}
-				if (object.isCircle === true) {
-					this.propertyX = "radius";
-					this.propertyY = "radius";
-				}
-				if (object.isText === true) {
-					this.propertyX = "fontSize";
-					this.propertyY = "fontSize";
-				}
-				this.oldWidth = oldWidth;
-				this.newWidth = newWidth;
-				this.oldHeight = oldHeight;
-				this.newHeight = newHeight;
-				this.oldX = oldX;
-				this.oldY = oldY;
-				this.newX = newX;
-				this.newY = newY;
-			}
+		function ChangeSizeCommand(object, oldWidth, oldHeight, newWidth, newHeight, oldX, oldY, newX, newY) {
 			
-			run() {
+			this.object = object;
+			if (object.isRectangle === true) {
+				this.propertyX = "width";
+				this.propertyY = "height";
+			}
+			if (object.isCircle === true) {
+				this.propertyX = "radius";
+				this.propertyY = "radius";
+			}
+			if (object.isEllipse === true) {
+				this.propertyX = "radiusX";
+				this.propertyY = "radiusY";
+			}
+			if (object.isText === true) {
+				this.propertyX = "fontSize";
+				this.propertyY = "fontSize";
+			}
+			this.oldWidth = oldWidth;
+			this.newWidth = newWidth;
+			this.oldHeight = oldHeight;
+			this.newHeight = newHeight;
+			this.oldX = oldX;
+			this.oldY = oldY;
+			this.newX = newX;
+			this.newY = newY;
+			
+			this.run = function() {
 				this.object[this.propertyX] = this.newWidth;
 				this.object[this.propertyY] = this.newHeight;
 				this.object.x = this.newX;
@@ -399,7 +487,7 @@
 				drawScene();
 			}
 			
-			undo() {
+			this.undo = function() {
 				this.object[this.propertyX] = this.oldWidth;
 				this.object[this.propertyY] = this.oldHeight;
 				this.object.x = this.oldX;
@@ -408,67 +496,111 @@
 			}
 		}
 		
-		MYLIB.setCanvas(canvas);
+		var _history = new History();
 		
-		MYLIB.runSpontaneously = false;
+		function newProject() {
+			//get values for new project and enter them in setupCanvas()
+			
+			var newWidth = document.getElementById("newWidth").value;
+			var newHeight = document.getElementById("newHeight").value;
+			var newAutoSize = document.getElementById("newAutoSize").checked;
+			var newConstrain = document.getElementById("newConstrain").checked;
+			
+			projectName = document.getElementById("newProjectName").value;
+			
+			if (newConstrain) {
+				setupCanvas(newWidth, newHeight, "constrain");
+			} else if (newAutoSize) {
+				setupCanvas(newWidth, newHeight, "autosize");
+			} else {
+				setupCanvas(newWidth, newHeight);
+			}
+			
+			newStoreName();
+			
+			//close menu
+			document.getElementById("newMenu").style.display = "none";
+		}
 		
-		var scene = new MYLIB.Scene();
-		scene.addScript(`function update() {\n    MYLIB.clear();\n    this.draw();\n}`,
-			'default');//default code to be run in the scene
+		var activeScene;
 		
-		scenes.push(scene);
+		function defaultCode() {
 		
-		var circ = new MYLIB.Circle(350, 100, 60);
-		scene.add(circ);
+			MYLIB.setCanvas(canvas);
+			
+			MYLIB.runSpontaneously = false;
+			
+			var scene = new MYLIB.Scene();
+			scene.addScript(`function update() {\n    MYLIB.clear();\n    this.draw();\n}`,
+				'default');//default code to be run in the scene
+			
+			scenes.push(scene);
+			
+			activeScene = scene;
+		}
+		defaultCode();
 		
-		var rect = new MYLIB.Rectangle(30, 300, 100, 50);
-		rect.rotation = 1;
-		scene.add(rect);
-		rect.addScript(textArea.value);	
-		addScriptOption(rect.scripts[0]);
-		
-		rect.addScript(`function start() {\n    this.fill = true;\n    this.fillColour = "green";\n}`);
-		addScriptOption(rect.scripts[1]);
-		//add that script
-		
-		var selectedObject = rect;
-		
-		var rect2 = new MYLIB.Rectangle(50, 100, 100, 50);
-		
-		rect2.name = "fireRect";
-		rect2.fill = true;
-		rect2.fillColour = "#FF0000";
+		var selectedObject;
 		
 		var selectedElement;
 		
-		scene.add(rect2);
+		function testCode() {
 		
-		var rect3 = new MYLIB.Rectangle(10, 10, 50, 20);
-		rect3.name = "testRecto";
-		rect2.add(rect3);
+			var circ = new MYLIB.Circle(350, 100, 60);
+			activeScene.add(circ);
+			
+			var rect = new MYLIB.Rectangle(30, 300, 100, 50);
+			rect.rotation = 1;
+			activeScene.add(rect);
+			rect.addScript(textArea.value);	
+			addScriptOption(rect.scripts[0]);
+			
+			rect.addScript(`function start() {\n    this.fill = true;\n    this.fillColour = "green";\n}`);
+			addScriptOption(rect.scripts[1]);
+			//add that script
+			
+			selectedObject = rect;
+			
+			var rect2 = new MYLIB.Rectangle(50, 100, 100, 50);
+			
+			rect2.name = "fireRect";
+			rect2.fill = true;
+			rect2.fillColour = "#FF0000";
+			
+			activeScene.add(rect2);
+			
+			var rect3 = new MYLIB.Rectangle(10, 10, 50, 20);
+			rect3.name = "testRecto";
+			rect2.add(rect3);
+			
+			var text = new MYLIB.Text("Hello!", 500, 300);
+			text.fontSize = 40;
+			text.rotation = 0;
+			activeScene.add(text);
+			
+			var image = new MYLIB.Sprite();
+			activeScene.add(image);
+			selectedObject = image;
+			
+			objects.push(image, text, rect, rect2, rect3, circ, activeScene);
 		
-		var text = new MYLIB.Text("Hello!", 500, 300);
-		text.fontSize = 40;
-		text.rotation = 0;
-		scene.add(text);
+		}
 		
-		var image = new MYLIB.Sprite();
-		scene.add(image);
-		selectedObject = image;
-		
-		objects.push(image, text, rect, rect2, rect3, circ, scene);
-		
-		var activeScene = scene;
-		
-		var _history = new History();
+		//testCode();
 		
 		drawScene();
 		
 		//DEFINING PROPERTIES FOR EACH OBJECT
 		
-		var propertiesElement = document.getElementById('properties');
-		
 		function drawProperties() {
+		
+			var propertiesElement = document.getElementById('properties');
+			
+			if (!selectedObject) {
+				
+				document.getElementById("propertiesTitle").innerHTML = "No object selected";
+				return "";
+			}
 			
 			updatePropertiesName();
 						
@@ -510,6 +642,8 @@
 			new Property("width", 1, 1, "number", "width"),
 			new Property("height", 1, 1, "number", "height"),
 			new Property("radius", 1, 1, "number", "radius"), 
+			new Property("radiusX", 1, 1, "number", "radiusX"),
+			new Property("radiusY", 1, 1, "number", "radiusY"),
 			new Property("zoomX", 1, 1, "number", "X-Zoom"),
 			new Property("zoomY", 1, 1, "number", "Y-Zoom"),
 			new Property("rotation", 1, 1, "angle", "rotation"),
@@ -958,7 +1092,7 @@
 		}
 		
 		function deleteScene() {
-			if (scenes.length > 0) {
+			if (scenes.length > 1) {
 				var i = scenes.indexOf(activeScene);
 				for (var j=0;j<activeScene.children.length;j++) {
 					delete activeScene.children[j];
@@ -1183,15 +1317,16 @@
 		}
 		
 		function selectObject(object) {
-			selectedElement.style.backgroundColor = "white";
-			selectedElement.style.color = "black";
+			if (selectedElement) {
+				selectedElement.style.backgroundColor = "white";
+				selectedElement.style.color = "black";
+			}
 			selectedObject = object;
 			
 			drawProperties();
 			drawScaleOverlay();
 			drawProjectOverview();
 			
-			var scriptElement = document.getElementById("scriptSelect");
 			scriptElement.value = 0;
 			
 			//fix script
@@ -1205,8 +1340,10 @@
 			
 			drawSceneOverview();
 			
-			selectedElement.style.backgroundColor = SELECTED_BACKGROUND_COLOR;
-			selectedElement.style.color = SELECTED_TEXT_COLOR;
+			if (selectedElement) {
+				selectedElement.style.backgroundColor = SELECTED_BACKGROUND_COLOR;
+				selectedElement.style.color = SELECTED_TEXT_COLOR;
+			}
 			
 			scriptChange();
 		}
@@ -1306,6 +1443,11 @@
 		
 		function mouseRelease(e) {
 			mouseDown = false;
+			
+			if (!selectedObject) {
+				return "";
+			}
+			
 			if (objectDragged === "object") {
 				_history.add(new ChangePositionCommand(selectedObject, objectPosX, objectPosY, selectedObject.x, selectedObject.y));
 			} else if (objectDragged !== true && objectDragged !== false && objectDragged !== "scene") {
@@ -1318,6 +1460,10 @@
 				if (selectedObject.isCircle === true) {
 					_history.add(new ChangeSizeCommand(selectedObject, objectSizeX, objectSizeY, selectedObject.radius,
 						selectedObject.radius, objectPosX, objectPosY, selectedObject.x, selectedObject.y));
+				}
+				if (selectedObject.isEllipse === true) {
+					_history.add(new ChangeSizeCommand(selectedObject, objectSizeX, objectSizeY, selectedObject.radiusX,
+						selectedObject.radiusY, objectPosX, objectPosY, selectedObject.x, selectedObject.y));
 				}
 			}
 			objectDragged = "";
@@ -1336,7 +1482,11 @@
 		
 		function mousePressed(e) {
 			if (menusDisabled === false) {
-				var result = mouseOnOverlay(e.offsetX, e.offsetY);
+				if (selectedObject) {
+					var result = mouseOnOverlay(e.offsetX, e.offsetY);
+				} else {
+					var result = false;
+				}
 				
 				switch(result) {
 					case true:
@@ -1402,6 +1552,16 @@
 								}
 							}
 							
+							if (descendents[i].isEllipse === true) {
+								if (descendents[i].radiusY ** 2 * ((e.offsetX - dims.x) ** 2) + 
+									descendents[i].radiusX ** 2 * ((e.offsetY - dims.y) ** 2) <= 
+									descendents[i].radiusX ** 2 * descendents[i].radiusY ** 2) {
+									
+									selected = true;
+								
+								}
+							}
+							
 							if (selected === true) {
 								selectObject(descendents[i]);
 								objectDragged = "object";
@@ -1434,6 +1594,12 @@
 							objectPosX = selectedObject.x;
 							objectPosY = selectedObject.y;
 						}
+						if (selectedObject.isEllipse === true) {
+							objectSizeX = selectedObject.radiusX;
+							objectSizeY = selectedObject.radiusY;
+							objectPosX = selectedObject.x;
+							objectPosY = selectedObject.y;
+						}
 						if (selectedObject.isText === true) {
 							objectSizeX = selectedObject.getWidth();
 							objectSizeY = selectedObject.getHeight();
@@ -1448,6 +1614,9 @@
 
 		function drawScaleOverlay() {
 			//using separate canvas for this
+			if (!selectedObject) {
+				return "";
+			}
 			
 			overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 			
@@ -1462,8 +1631,6 @@
 			squareSize = 7;
 			
 			overlayCtx.save();
-			
-			
 			
 			var selectedDims = {x: selectedObject.x * zoomX, y: selectedObject.y * zoomY, rotation: selectedObject.rotation};
 			var parentDims = selectedObject.addParentProperties();
@@ -1487,6 +1654,14 @@
 				selectedDims.height = selectedObject.radius * 2 * zoomY;
 				
 			}
+			if (selectedObject.isEllipse === true) {
+				selectedDims.x -= selectedObject.radiusX * zoomX;
+				selectedDims.y -= selectedObject.radiusY * zoomY;
+				selectedDims.width = selectedObject.radiusX * 2 * zoomX;
+				selectedDims.height = selectedObject.radiusY * 2 * zoomY;
+				
+			}
+			
 			if (selectedObject.isText === true) {
 				selectedDims.width = selectedObject.getWidth() * zoomX;
 				selectedDims.height = selectedObject.getHeight() * zoomY;
@@ -1561,6 +1736,10 @@
 				var coordText = document.getElementById('coords');
 				coordText.innerHTML = "(x: " + mousePosX + ", y: " + mousePosY + ")";
 				
+				if (!selectedObject) {
+					return "";
+				}
+				
 				var dimX;
 				var dimY;
 				
@@ -1574,6 +1753,10 @@
 					dimX = "radius";
 					dimY = "radius";
 					sameAxis = true;
+				}
+				if (selectedObject.isEllipse === true) {
+					dimX = "radiusX";
+					dimY = "radiusY";
 				}
 				if (selectedObject.isText === true) {
 					dimX = "fontSize";
@@ -1827,7 +2010,7 @@
 			var baseCanvas = document.createElement("canvas");
 			baseCanvas.width = img.width;
 			baseCanvas.height = img.height;
-			var baseCtx = canvas.getContext("2d");
+			var baseCtx = baseCanvas.getContext("2d");
 			baseCtx.drawImage(img, 0, 0);
 			var dataURL = canvas.toDataURL("image/png");
 			return dataURL;
@@ -1868,15 +2051,16 @@
 		function readDocument(readDoc) {
 			//validateDocument();
 			//if (confirm("Your stuff will be overwritten")) {
-				//console.log(readDoc);
 				var newlineregex = RegExp("\n|;", "g");
 				var newlines = [];
 				var match;
 				
 				while (match = newlineregex.exec(readDoc)) {
 					newlines.push(match.index);
-				
 				}
+				
+				var variables = [];
+				
 				for (var i=0;i<newlines.length;i++) {
 					if (i===0) {
 						var tempString = readDoc.substring(0, newlines[0]);
@@ -1884,8 +2068,13 @@
 						var tempString = readDoc.substring(newlines[i-1], newlines[i]);
 					}
 					tempString = tempString.replace(/\s/g, "");
-					console.log(tempString);
-					if (tempString.indexOf("var") === 1) {
+					
+					if (tempString.chartAt(0) === "<" || tempString.substring(0, 1) === "//") {
+						//skip this
+						continue;
+					}
+					
+					if (tempString.substring(0, 2) === "var") {
 						if (tempString.indexOf("Scene(")) {
 							
 						}
@@ -1936,6 +2125,9 @@
 						break;
 					case "ci":
 						newObject("Circle");
+						break;
+					case "el":
+						newObject("Ellipse");
 						break;
 					case "sp":
 						newObject("Rectangle");
@@ -2021,42 +2213,451 @@
 		}
 		
 		function saveCurrentState2() {
+			openDB(false);
+		}
+		
+		function loadCurrentState2(data) {
+			if (data) {
+				resetCurrent();
+				
+				//changing prototypes to what they should be
+				
+				var newScenes = [];
+				
+				console.log(data);
+				
+				for (var i=0;i<data.scenes.length;i++) {
+					var newScene = convertObj(data.scenes[i]);
+					addChildren(data.scenes[i], newScene);
+					newScenes.push(newScene);
+				}
+				
+				scenes = newScenes;
+				
+				activeScene = scenes[0];
+				
+				globalVariables = data.globalVariables;
+				
+				switch(data.metadata.sizeData.mode) {
+					case "sized":
+						setupCanvas(data.metadata.sizeData.width, 
+							data.metadata.sizeData.height, data.metadata.sizeData.mode);
+						
+						break;
+						
+					case "autosize":
+						setupCanvas(0, 0, data.metadata.sizeData.mode);
+						
+						break;
+						
+					case "constrain":
+						setupCanvas(1, data.metadata.sizeData.ratio, data.metadata.sizeData.mode);
+						break;
+						
+					default:
+						console.log(data.metadata.sizeData);
+					
+				}
+				
+				projectName = data.metadata.name;
+				
+			} else {
+				openDB(true);
+			}
 			
+			function convertObj(obj) {
+				
+				var newObj;
+				
+				if (obj.isRectangle) {
+					newObj = new MYLIB.Rectangle();
+				}
+				if (obj.isCircle) {
+					newObj = new MYLIB.Circle();
+				}
+				if (obj.isEllipse) {
+					newObj = new MYLIB.Ellipse();
+				}
+				if (obj.isText) {
+					newObj = new MYLIB.Text();
+				}
+				if (obj.isSprite) {
+					newObj = new MYLIB.Sprite();
+					console.log(obj.image, obj);
+					newObj.setImage(obj.image, true);
+				}
+				if (obj.isScene) {
+					newObj = new MYLIB.Scene();
+				}
+				
+				for (var k in obj) {
+					if (k !== "children" && k !== "parent" && k !== "image") {
+						newObj[k] = obj[k];
+					}
+				}
+				
+				return newObj;
+			}
+			
+			function addChildren(oldObj, newObj) {
+				for (var i=0;i<oldObj.children.length;i++) {
+					var newChild = convertObj(oldObj.children[i]);
+					newObj.add(newChild);
+					addChildren(oldObj.children[i], newChild);
+				}
+			}
 		}
 		
 		//database structure:
 		//db->tables/stores = each project -> {scenes, global variables, metadata}
 		
-		function openDB() {
-			var databaseName = "projects";
-			
-			var storeName;
+		function openDB(load, version) {
 			
 			var database;
 			
-			var openRequest = indexeddb.open(databaseName);
+			var openRequest;
+			
+			//debugger;
+			
+			if (version) {
+				openRequest = indexedDB.open(databaseName, version);
+			} else {
+				openRequest = indexedDB.open(databaseName);
+			}
 			
 			openRequest.onupgradeneeded = function(e) {
 				database = e.target.result;
 				
-				var store = database.createObjectStore(storeName, {keyPath: 'id', autoIncrement: true });
-				
-				store.createIndex("scenes", "scenes");
-				store.createIndex("globalVariables", "globalVariables");
-				store.createIndex("metadata", "metadata");
+				if (!checkStoreExistence(database, currentStoreName)) {
+					
+					if (load === true) {
+						console.log("cannot load - store doesn't exist");
+						openRequest = null;
+						return false;
+					}
+					
+					//store doesn't exist yet
+					var store = database.createObjectStore(currentStoreName, { autoIncrement: true });
+					
+					store.createIndex("scenes", "scenes");
+					store.createIndex("globalVariables", "globalVariables");
+					store.createIndex("metadata", "metadata");
+				}
 			}
 			
 			//update current objectstore
 			openRequest.onsuccess = function(e) {
-				db = this.result;
+				database = e.target.result;
+				
+				if (checkStoreExistence(database, currentStoreName)) {
+					
+					if (load === false) {
+						//save
+						var dataObj = {};
+						
+						var newScenes = [];
+
+						for (var i=0;i<scenes.length;i++) {
+							var tempScene = scenes[i].clone();
+							checkObjects(tempScene);
+							newScenes.push(tempScene);
+						}
+						
+						function checkObjects(obj) {
+							for (var i=0;i<obj.children.length;i++) {
+								checkObjects(obj.children[i]);
+							}
+							if (obj.isSprite) {
+								//obj.image = getBase64Image(obj.image);
+								obj.image = obj.image.src;
+							}
+						}
+						
+						console.log(scenes, newScenes);
+
+						dataObj.scenes = newScenes;
+						
+						dataObj.globalVariables = globalVariables;
+						
+						var sizeData = {mode: canvasMode};
+						
+						if (canvasMode === "sized") {
+							sizeData.width = canvasWidth;
+							sizeData.height = canvasHeight;
+						}
+						
+						if (canvasMode === "constrain") {
+							sizeData.ratio = canvasRatio;
+						}
+						
+						//low quality because only needs to be small image
+						
+						MYLIB.clear();
+						
+						//make background white because jpeg doesn't support transparency
+						MYLIB.context.fillStyle = "#FFFFFF";
+						MYLIB.context.fillRect(0, 0, canvas.width, canvas.height);
+			
+						activeScene.draw();
+						
+						var imgData = canvas.toDataURL("image/jpeg", 0.5);
+						
+						drawScene();
+						
+						dataObj.metadata = {sizeData: sizeData, name: projectName, previewImage: imgData};
+						
+						updateStore(database, currentStoreName, dataObj);
+					} else {
+						//load data
+						loadStore(database, currentStoreName);
+					}
+				} else {
+					
+					//have to upgrade the version of the db
+					var vers = database.version;
+					
+					database.close();
+					
+					openDB(load, vers+1);
+				}
+			}
+			
+			openRequest.onerror = dberror;
+			
+			function checkStoreExistence(database, storeName) {
+				for (var i=0;i<database.objectStoreNames.length;i++) {
+					if (database.objectStoreNames[i] === storeName) {
+						return true;
+					}
+				}
+				return false;
+			}
+			
+			function updateStore(database, storeName, data) {
+				var trans = database.transaction(storeName, "readwrite");
+				var objStore = trans.objectStore(storeName);
+				
+				var putRequest = objStore.put(data, 0);
+				
+				putRequest.onsuccess = function(e) {
+					console.log("data successfully updated");
+				}
+				
+				putRequest.onerror = dberror;
+			}
+			
+			function loadStore(database, storeName) {
+				var trans = database.transaction(storeName, "readonly");
+				var objStore = trans.objectStore(storeName);
+				
+				var getRequest = objStore.get(0);
+				
+				getRequest.onsuccess = function(e) {
+					console.log("loaded data");
+					loadCurrentState2(e.target.result);
+				}
+				
+				getRequest.onerror = dberror;
+			}
+			
+			function dberror(e) {
+				console.log(e.target.error);
+			}
+		}
+		
+		function imageToBlob(img) {
+			// Create XHR
+			var xhr = new XMLHttpRequest();
+			
+			var blob;
+
+			xhr.open("GET", img.src, true);
+			// Set the responseType to blob
+			xhr.responseType = "blob";
+
+			xhr.addEventListener("load", function () {
+				if (xhr.status === 200) {
+					console.log("Image retrieved");
+					
+					// File as response
+					blob = xhr.response;
+
+					// Put the received blob into IndexedDB
+					
+				}
+			}, false);
+			// Send XHR
+			xhr.send();
+		}
+		
+		function deleteDB() {
+			var deleteRequest = indexedDB.deleteDatabase(databaseName);
+			
+			deleteRequest.onerror = function(e) {
+				console.error("failed to delete database:", e.target.error);
+			};
+			
+			deleteRequest.onsuccess = function(e) {
+				console.log("database deleted");
+			};
+		}
+		
+		function newStoreName() {
+			var dbRequest = indexedDB.open(databaseName);
+			
+			var string;
+			
+			dbRequest.onsuccess = function(e) {
+				var db = e.target.result;
+				
+				var success = false;
+				var i = 1;
+				do {
+					string = "untitled" + i;
+					if (db.objectStoreNames.contains(string)) {
+						i++;
+					} else {
+						success = true;
+					}
+				} while (success === false);
+				
+				currentStoreName = string;
+			}
+			
+			
+		}
+		
+		function loadProjectBrowser() {
+			var browser = document.getElementById("existingBrowser");
+			
+			//First, add loading text
+			//browser.innerHTML = "Loading...";
+			
+			//set up browser
+			var maxWidth = parseFloat(window.getComputedStyle(browser).getPropertyValue('width'));
+			
+			var maxNum = Math.floor(maxWidth / 156);
+			
+			browser.innerHTML = "";
+			while(browser.children.length>0) {
+				browser.removeChild(browser.children[0]);
+			}
+			
+			var tempRow = document.createElement("DIV");
+			browser.appendChild(tempRow);
+			var numInRow = 0;
+			
+			var numObjectStores;
+			var requestsCompleted = 0;
+			
+			var openRequest = indexedDB.open(databaseName);
+			
+			openRequest.onupgradeneeded = function() {
+				//??
+			};
+			
+			openRequest.onsuccess = function(e) {
+				var db = e.target.result;
+				
+				numObjectStores = db.objectStoreNames.length;
+				for (var i=0;i<db.objectStoreNames.length;i++) {
+					//iterate through each objectstore
+					
+					var storeName = db.objectStoreNames[i];
+					
+					var trans = db.transaction(storeName, "readonly");
+					var objStore = trans.objectStore(storeName);
+					
+					var getRequest = objStore.get(0);
+					
+					getRequest.onsuccess = function(e) {
+						if (!e.target.result) {
+							console.log(storeName);
+							return "";
+						}
+						addPreviewBox(e.target.result, e.target.source.name);
+						requestsCompleted++;
+						if (requestsCompleted === numObjectStores) {
+							//completed
+							db.close();
+						}
+					}
+					
+				}
+			};
+			
+			openRequest.onerror = function() {
+				console.error("ERROR");
+			};
+			
+			function addPreviewBox(data, storeName) {
+				//each column is 128px across
+				
+				//each box is 156 x 156
+				//image preview is 128 x 128
+				
+				//create rows as long as there are images to load
+				
+				if (numInRow === maxNum) {
+					tempRow = document.createElement("DIV");
+					browser.appendChild(tempRow);
+					numInRow = 0;
+				}
+				
+				var projectBox = document.createElement("FIGURE");
+				projectBox.className = "projectBox";
+				projectBox.storeName = storeName;
+				projectBox.data = data;
+				
+				var image = document.createElement("IMG");
+				image.className = "previewProjectIcon";
+				image.src = data.metadata.previewImage;
+				//image
+				
+				var caption = document.createElement("FIGCAPTION");
+				caption.innerHTML = data.metadata.name;
+				caption.className = "projectCaption";
+				
+				projectBox.appendChild(image);
+				projectBox.appendChild(caption);
+				tempRow.appendChild(projectBox);
+				
+				projectBox.addEventListener("click", function(e) {
+					
+					//clear selectedImage first
+					
+					if (selectedProject) {
+						selectedProject.style.backgroundColor = "#FFFFFF";
+						selectedProject.children[1].style.color = "#000000";
+					}
+					
+					this.style.backgroundColor = "#0022FF";
+					this.children[1].style.color = "#FFFFFF";
+					
+					selectedProject = this;
+				});
+				
+				projectBox.addEventListener("dblclick", function(e) {
+					loadProject(this.data, this.storeName);
+				});
+				
+				numInRow++;
 				
 			}
 			
-			openRequest.onerror = function(e) {
-				console.error(databaseName, e.target.errorCode);
-			};
+		}
+		
+		function loadProject(data, storeName) {
+			currentStoreName = storeName;
 			
-			dbVersion += 1;
+			document.getElementById("startMenu").style.display = "none";
+			
+			loadCurrentState2(data);
+			
+			drawScene();
+			drawSceneOverview();
+			drawProjectOverview();
+			drawProperties();
 		}
 		
 		function saveCurrentState() {
@@ -2077,6 +2678,7 @@
 			//rect = re, circle = ci
 			//text = te, script = sc
 			//base = ba, shape = sh
+			//ellipse = el
 			//sprite = sp, 
 			
 			function addProperties(object) {
@@ -2101,6 +2703,9 @@
 											break;
 										case "Circle":
 											type = "ci";
+											break;
+										case "Ellipse":
+											type = "el";
 											break;
 										case "Text":
 											type = "te";
@@ -2178,16 +2783,25 @@
 		
 		function detachTextEditor() {
 			var myStyleSheet;
-			var screenWidth = screen.width, screenHeight = screen.height;
+			
+			//var screenWidth = screen.width, screenHeight = screen.height;
+			var editorSize = window.getComputedStyle(textEditor);
+			var editorWidth = editorSize.getPropertyValue("width");
+			var editorHeight = editorSize.getPropertyValue("height");
+			
+			var editorPos = textEditor.getBoundingClientRect();
+			// these are relative to the viewport, i.e. the window
+			var editorTop = editorPos.top;
+			var editorLeft = editorPos.left;
 			
 			var detachButton = document.getElementById('detachButton');
 			detachButton.innerHTML = "reattach";
-			detachButton.onclick = "reattachTextEditor()";
+			detachButton.onclick = reattachTextEditor;
 			
-			newWindow = window.open("", "textEditWindow", "width=" + screenWidth + ", height=" + screenHeight + ", location=no, left=0");
-			newWindow.document.body.append(textArea);
+			newWindow = window.open("", "textEditWindow", "width=" + editorWidth + ", height=" + editorHeight + ", left=" + editorLeft + ", top=" + editorTop + ", location=no");
+			newWindow.document.body.append(textEditor);
 			newWindow.window.addEventListener('unload', function() {
-				retachTextEditor();
+				reattachTextEditor(newWindow);
 			});
 			newWindow.document.title = "Text Editor";
 			
@@ -2197,40 +2811,67 @@
 			
 			myStyleSheet = document.createElement('style');
 			myStyleSheet.appendChild(document.createTextNode(""));
-			myStyleSheet.type = "text/css"
-			myStyleSheet.innerHTML = (`textarea { display: block; width: 100%; height: 80%;
-			box-sizing: border-box; resize: none;}
-			* { margin: 0; border: 0; padding: 0;}
-			button {background-color: buttonface; font-size: 20px; 
-			padding: 10px;}`);
+			myStyleSheet.type = "text/css";
+			
+			myStyleSheet.innerHTML = (`#textArea { width: 100%;
+			height: 93%; resize: none; font-size: 16px;
+			word-break: break-all; overflow: visible; white-space: pre-wrap;}
+			* { margin: 0; border: 0; padding: 0; overflow: hidden; box-sizing: border-box;}
+			button {background-color: buttonface; font-size: 20px; padding: 10px;}
+			#textToolbar { width: 100%; height: 7%; border-top: 2px solid black;
+			position: relative; bottom: 5px; }`);
 			
 			newWindow.document.head.appendChild(myStyleSheet);
 			
-			var toolbar = document.getElementById('textToolbar');
+			/*var toolbar = document.getElementById('textToolbar');
 			toolbar.parentElement.removeChild(toolbar);
-			newWindow.document.body.appendChild(toolbar);
+			newWindow.document.body.appendChild(toolbar);*/
 		}
 		
 		function reattachTextEditor() {
 			
+			var viewport = document.getElementById("viewport");
+			
+			var main = document.getElementById("main");
+			main.insertBefore(textEditor, viewport.nextSibling);
+			
+			var detachButton = document.getElementById('detachButton');
+			detachButton.innerHTML = "detach";
+			detachButton.onclick = detachTextEditor;
+			
+			newWindow.close();
 		}
 		
-		function fullScreen() {
+		function changeFullscreen() {
 			var bg = document.getElementById("viewport");
-			//launchIntoFullscreen(bg);
 			
-			bg.addEventListener("webkitfullscreenchange", function() {
-				console.log("testo");
-			});
-			bg.addEventListener("webkitfullscreenerror", function(){
+			bg.onwebkitfullscreenchange = function() {
+				if (!fullscreen) {
+					bg.style.width = "100vw";
+					bg.style.height = "100vh";
+					document.getElementById("fullScreen").innerHTML = "minimise";
+					
+					textEditor.style.display = "block"
+				} else {
+					bg.style.width = "70%";
+					bg.style.height = "100%";
+					document.getElementById("fullScreen").innerHTML = "fullscreen";
+					
+					textEditor.style.display = "inline-block";
+				}
+				
+				fullscreen = !fullscreen;
+			};
+			
+			bg.onwebkitfullscreenerror = function(){
 				console.log("Full screen failed");
-			});
+			};
 			
-			bg.webkitRequestFullscreen();
-		}
-		
-		function normalSized() {
-			
+			if (!fullscreen) {
+				bg.webkitRequestFullscreen();
+			} else {
+				document.webkitExitFullscreen();
+			}
 		}
 		
 		function increaseFontSize() {
@@ -2255,12 +2896,13 @@
 					window[globalVariables[i][0]] = globalVariables[i][1];
 				}
 				
-				MYLIB.run(scene.clone());
+				//change later to first scene
+				MYLIB.run(activeScene.clone());
 				running = true;
 				disableMenus();
 			}
 			if (paused === true) {
-				MYLIB.run(scene.clone());
+				MYLIB.run(activeScene.clone());
 				running = true;
 				paused = false;
 			}
@@ -2296,7 +2938,7 @@
 		
 		function updateCode() {
 			//change number for index of script
-			var value = document.getElementById("scriptSelect").value;
+			var value = scriptElement.value;
 			selectedObject.updateScript(value, textArea.value);
 		}
 		
@@ -2311,11 +2953,16 @@
 			var temp = document.createElement("OPTION");
 			temp.value = script.index;
 			temp.innerHTML = script.name;
-			document.getElementById("scriptSelect").appendChild(temp);
+			scriptElement.appendChild(temp);
 		}
 		
 		function scriptChange() {
-			var value = document.getElementById("scriptSelect").value;
+			var value = scriptElement.value;
+			if (!selectedObject) {
+				textArea.value = "No object selected";
+				textArea.readOnly = true;
+				return "";
+			}
 			if (selectedObject.scripts[value] !== undefined) {
 				textArea.value = selectedObject.scripts[value].code;
 				textArea.readOnly = false;
@@ -2363,7 +3010,20 @@
 		}
 		
 		window.onload = function() {
+			//disableMenus();
+			scriptChange();
+		}
 		
+		function showNewProject() {
+			document.getElementById("startMenu").style.display = "none";
+			document.getElementById("newMenu").style.display = "block";
+		}
+		
+		function showStartMenu() {
+			document.getElementById("newMenu").style.display = "none";
+			document.getElementById("startMenu").style.display = "block";
+			
+			loadProjectBrowser();
 		}
 		
 	</script>

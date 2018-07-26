@@ -317,6 +317,10 @@ var MYLIB = {};
 			if (this.isCircle === true) {
 				copy.radius = this.radius;
 			}
+			if (this.isEllipse === true) {
+				copy.radiusX = this.radiusX;
+				copy.radiusY = this.radiusY;
+			}
 			if (this.isText === true) {
 				copy.fontSize = this.fontSize;
 				copy.string = this.string;
@@ -330,6 +334,13 @@ var MYLIB = {};
 				copy.strokeColour = this.strokeColour;
 				copy.strokeSize = this.strokeSize;
 				
+			}
+			
+			if (this.isSprite === true) {
+				copy.url = this.url;
+				copy.width = this.width;
+				copy.height = this.height;
+				copy.image = this.image;
 			}
 
 			for (var i=0;i<this.children.length;i++) {
@@ -576,6 +587,60 @@ var MYLIB = {};
 			}
 			return false;
 		}
+		
+		
+	}
+	
+	class Ellipse extends Shape {
+		constructor(x=0, y=0, radiusX=30, radiusY=30) {
+			super(x, y);
+			
+			this.radiusX = radiusX;
+			this.radiusY = radiusY;
+			
+			this.isEllipse = true;
+		}
+		draw() {
+
+			var parentProperties = this.addParentProperties();
+			
+			var drawX = this.x + parentProperties.x;
+			var drawY = this.y + parentProperties.y;
+			var drawRot = this.rotation + parentProperties.rotation;
+			var drawOpacity = this.opacity * parentProperties.opacity;
+			var drawVisible = this.visible && parentProperties.visible;
+		
+			if (drawVisible === true) {
+				
+				if (this.rotationAngleMode === "DEG") {
+					drawRot *= Math.PI / 180;
+				}
+				//rotate circle????
+				
+				context.globalAlpha = drawOpacity;
+				
+				context.beginPath();
+				context.ellipse(drawX, drawY, this.radiusX, this.radiusY, drawRot, 0, 2*Math.PI);
+				
+				if (this.stroke === true) {
+					context.strokeStyle = this.strokeColour;
+					context.lineWidth = this.strokeSize;
+					context.stroke();
+				}
+				
+				if (this.fill === true) {
+					context.fillStyle = this.fillColour;
+					context.fill();
+				}
+				
+				//close path
+				context.closePath();
+				
+				//reset opacity
+				context.globalAlpha = 1;
+			}
+
+		}
 	}
 	
 	class Text extends Shape {
@@ -722,7 +787,7 @@ var MYLIB = {};
 			}
 		}
 		
-		setImage(url) {
+		setImage(url, keepSize) {
 			
 			this.image = new Image();
 			
@@ -733,8 +798,10 @@ var MYLIB = {};
 			this.image.addEventListener('load', function() {
 				//note this = this.image
 				self.loaded = true;
-				self.width = this.width;
-				self.height = this.height;
+				if (keepSize) {
+					self.width = this.width;
+					self.height = this.height;
+				}
 			});
 			this.image.addEventListener('error', function(e) {
 				console.log(e, "ERROR");
@@ -862,6 +929,7 @@ var MYLIB = {};
 	MYLIB.Shape = Shape;
 	MYLIB.Rectangle = Rectangle;
 	MYLIB.Circle = Circle;
+	MYLIB.Ellipse = Ellipse;
 	MYLIB.Scene = Scene;
 	MYLIB.Text = Text;
 	MYLIB.Sprite = Sprite;

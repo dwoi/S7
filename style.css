@@ -46,6 +46,7 @@
 	height: 100%;
 	border-left: 3px solid black;
 	display: inline-block;
+	vertical-align: top;
 }
 
 #textArea {
@@ -184,7 +185,7 @@
     display: block;
 }
 
-#addButton, #exportButton, #deleteButton {
+#addButton, #exportButton, #deleteButton, #fullScreen {
 	height: 100%;
 	padding-left: 10px;
 	padding-right: 10px;
@@ -223,14 +224,14 @@
 	padding-right: 10px;
 	background-color: rgb(221, 221, 221);
 	display: inline-block;
+	
 }
 
 #importText {
-	display: inline-block;
-	vertical-align: middle;
-	line-height: 200%;
-	height: 100%;
 	font-size: 20px;
+	font-family: Arial;
+	position: relative;
+	top: 25%;
 }
 
 #importButton {
@@ -339,6 +340,7 @@ input {
 	border: 2px solid black;
 	border-radius: 20px;
 	display: none;
+	z-index: 10;
 }
 
 #importArea {
@@ -445,6 +447,17 @@ figure {
 	display: block;
 }
 
+#backArrow {
+	height: 100%;
+	float: left;
+	border-right: 2px black solid;
+}
+
+#newText {
+	text-align: center;
+	font-size: 50px;
+}
+
 #newButton {
 	width: 100%;
 	height: 20%;
@@ -470,6 +483,7 @@ figure {
 	width: 100%;
 	height: 80%;
 	display: block;
+	overflow: auto;
 }
 
 #existingArea {
@@ -490,4 +504,34 @@ figure {
 
 #existingBrowser {
 	height: 80%;
+	overflow: auto;
+}
+
+.projectBox {
+	width: 156px;
+	height: 156px;
+	display: inline-block;
+}
+
+.previewProjectIcon {
+	/*width: 156px;
+	height: 128px;
+	padding-left: 14px;
+	padding-right: 14px;*/
+	width: 128px;
+	height: 128px;
+	display: block;
+	margin: auto;
+}
+
+.projectCaption {
+	text-align: center;
+}
+
+#projectPreview {
+	border: 1px solid black;
+	width: 256px;
+	height: 256px;
+	display: block;
+	margin: auto;
 }
