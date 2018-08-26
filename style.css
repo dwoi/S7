@@ -79,19 +79,37 @@
 	
 }
 
-#variables {
-	width: 70%;
+#varNameColumn, #varValueColumn {
+	width: 35%;
 	height: 100%;
-	display: inline-block;
+	text-align: center;
 	overflow: auto;
+	border-right: 2px solid black;
+}
+
+#varNameColumn {
+	float: left;
+}
+
+#varValueColumn {
+	float: left;
+}
+
+.varBoxes {
+	border: 1px solid black;
+	width: 75%;
+	margin-top: 5px;
+	text-align: center;
+}
+
+.varHeader {
+	width: 100%;
 }
 
 #addVariables {
 	width: 30%;
 	height: 100%;
-	display: inline-block;
 	float: right;
-	border-left: 2px solid black;
 }
 
 #addVariableButton {
@@ -534,4 +552,39 @@ figure {
 	height: 256px;
 	display: block;
 	margin: auto;
+}
+
+#exportTitle {
+	width: 100%;
+	height: 20%;
+	text-align: center;
+	border-bottom: 2px black solid;
+}
+
+#exportBackArrow {
+	height: 100%;
+	float: left;
+	border-right: 2px black solid;
+}
+
+#exportTitleText {
+	font-size: 80px;
+}
+
+#exportMain {
+	width: 100%;
+	height: 80%;
+	text-align: center;
+}
+
+#exportProgramButton {
+	width: 48%;
+	height: 80px;
+	display: inline-block;
+}
+
+#exportLibraryButton {
+	width: 48%;
+	height: 80px;
+	display: inline-block;
 }

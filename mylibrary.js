@@ -15,12 +15,10 @@ var MYLIB = {};
 	
 	var nameOfFunctions = ["start", "update", "hover", "click"];
 	
-	//remember booleans are values not references
-	var runSpontaneously = true;
-	
 	//var functions = [];
 	
 	var objects = [];
+	var scenes = [];
 	
 	var paused = false;
 	var running = false;
@@ -28,21 +26,35 @@ var MYLIB = {};
 	var mouseX, mouseY;
 	var mouseDown;
 	
+	var touches = [];
+	
+	var controlExists = false;
+	var currentControl = null;
+	
 	//only run setup once stuff is finished 
 	if (document.readyState === 'complete') {
-		if (MYLIB.runSpontaneously === true) {
-			run();
-		}
+		loaded();
 	} else {
 		//window.addEventListener('load', thisStart);
-		document.addEventListener('DOMContentLoaded', function() {
-			if (MYLIB.runSpontaneously === true) {
+		document.addEventListener('DOMContentLoaded', loaded);
+	}
+	
+	function loaded() {
+		if (currentControl === null) {
+			var defaultControl = new Control();
+		}
+		if (currentControl.runSpontaneously === true) {
+			if (scenes.length > 0) {
+				run(scenes[0]);
+			} else {
 				run();
 			}
-		});
+		}
 	}
 	
 	function setup(scene) {
+		
+		currentControl.currentScene = scene;
 		
 		for (var i=0;i<nameOfFunctions.length;i++) {
 			if (!functionList[nameOfFunctions[i]]) {
@@ -81,14 +93,36 @@ var MYLIB = {};
 	
 	function addEventListeners() {
 		canvas.addEventListener('mousemove', onMouseMove);
+		canvas.addEventListener('touchmove', onTouchMove);
+		
 		document.addEventListener('mousedown', onMouseDown);
 		document.addEventListener('mouseup', onMouseUp);
+		
+		document.addEventListener('touchdown', onTouchStart);
+		document.addEventListener('touchup', onMouseUp);
 	}
 	
 	function removeEventListeners() {
 		canvas.removeEventListener('mousemove', onMouseMove);
+		canvas.removeEventListener('touchmove', onTouchMove);
+		
 		document.removeEventListener('mousedown', onMouseDown);
 		document.removeEventListener('mouseup', onMouseUp);
+		
+		document.removeEventListener('touchdown', onTouchStart);
+		document.removeEventListener('touchup', onMouseUp);
+	}
+	
+	function onTouchStart(e) {
+		
+	}
+	
+	function onTouchMove(e) {
+		
+	}
+	
+	function onTouchEnd(e) {
+		
 	}
 	
 	function onMouseMove(e) {
@@ -113,7 +147,10 @@ var MYLIB = {};
 	
 	function switchScene(scene) {
 		if (scene !== undefined) {
-			functionList = [];
+			for (var i=0;i<nameOfFunctions.length;i++) {
+				functionList[nameOfFunctions[i]] = [];
+			}
+			
 			for (var i=0;i<scene.scripts.length;i++) {
 				parseScript(scene.scripts[i], scene);
 			}
@@ -230,6 +267,22 @@ var MYLIB = {};
 	/*
 	**CLASSES
 	*/
+	
+	class Control {
+		constructor() {
+			if (controlExists === true) {
+				console.log("overriding old control object");
+			} else {
+				controlExists = true;
+			}
+			
+			currentControl = this;
+			
+			this.currentScene;
+			
+			this.runSpontaneously = true;
+		}
+	}
 	
 	class BaseObject {
 		constructor(x, y) {
@@ -371,7 +424,7 @@ var MYLIB = {};
 			return array;
 		}
 		
-		addParentProperties() {
+		getRealProperties() {
 			//add x, y, and rotation to child objects
 			var self = this;
 			
@@ -382,15 +435,7 @@ var MYLIB = {};
 			var drawVisible = startProp("visible");
 			
 			function startProp(prop) {
-				var finalProp = 0;
-				
-				if (prop === "opacity") {
-					finalProp = 1;
-				}
-				
-				if (prop === "visible") {
-					finalProp = true;
-				}
+				var finalProp = self[prop];
 				
 				if (self.parent !== undefined && self.parent !== null) {
 					addProp(self);
@@ -471,13 +516,13 @@ var MYLIB = {};
 		}
 		draw() {
 			//rotateContext(this.rotation);
-			var parentProperties = this.addParentProperties();
+			var realProperties = this.getRealProperties();
 			
-			var drawX = this.x + parentProperties.x;
-			var drawY = this.y + parentProperties.y;
-			var drawRot = this.rotation + parentProperties.rotation;
-			var drawOpacity = this.opacity * parentProperties.opacity;
-			var drawVisible = this.visible && parentProperties.visible;
+			var drawX = realProperties.x;
+			var drawY = realProperties.y;
+			var drawRot = realProperties.rotation;
+			var drawOpacity = realProperties.opacity;
+			var drawVisible = realProperties.visible;
 			
 			if (drawVisible === true) {
 				
@@ -523,8 +568,9 @@ var MYLIB = {};
 		}
 		
 		pointInside(x, y) {
-			if (x >= this.x && x <= this.x + this.width &&
-				y >= this.y && y <= this.y + this.height) {
+			var realProps = this.getRealProperties();
+			if (x >= realProps.x && x <= realProps.x + this.width &&
+				y >= realProps.y && y <= realProps.y + this.height) {
 				return true;
 			}
 			return false;
@@ -541,13 +587,13 @@ var MYLIB = {};
 		}
 		draw() {
 
-			var parentProperties = this.addParentProperties();
+			var realProperties = this.getRealProperties();
 			
-			var drawX = this.x + parentProperties.x;
-			var drawY = this.y + parentProperties.y;
-			var drawRot = this.rotation + parentProperties.rotation;
-			var drawOpacity = this.opacity * parentProperties.opacity;
-			var drawVisible = this.visible && parentProperties.visible;
+			var drawX = realProperties.x;
+			var drawY = realProperties.y;
+			var drawRot = realProperties.rotation;
+			var drawOpacity = realProperties.opacity;
+			var drawVisible = realProperties.visible;
 		
 			if (drawVisible === true) {
 				
@@ -582,7 +628,8 @@ var MYLIB = {};
 		}
 		
 		pointInside(x, y) {
-			if (Math.hypot(this.y - y, this.x - x) <= this.radius) {
+			var realProps = this.getRealProperties();
+			if (Math.hypot(realProps.y - y, realProps.x - x) <= this.radius) {
 				return true;
 			}
 			return false;
@@ -602,20 +649,19 @@ var MYLIB = {};
 		}
 		draw() {
 
-			var parentProperties = this.addParentProperties();
+			var realProperties = this.getRealProperties();
 			
-			var drawX = this.x + parentProperties.x;
-			var drawY = this.y + parentProperties.y;
-			var drawRot = this.rotation + parentProperties.rotation;
-			var drawOpacity = this.opacity * parentProperties.opacity;
-			var drawVisible = this.visible && parentProperties.visible;
+			var drawX = realProperties.x;
+			var drawY = realProperties.y;
+			var drawRot = realProperties.rotation;
+			var drawOpacity = realProperties.opacity;
+			var drawVisible = realProperties.visible;
 		
 			if (drawVisible === true) {
 				
 				if (this.rotationAngleMode === "DEG") {
 					drawRot *= Math.PI / 180;
 				}
-				//rotate circle????
 				
 				context.globalAlpha = drawOpacity;
 				
@@ -641,6 +687,16 @@ var MYLIB = {};
 			}
 
 		}
+		pointInside(x, y) {
+			var realProps = this.getRealProperties();
+			if (this.radiusY ** 2 * ((x - realProps.x) ** 2) + 
+				this.radiusX ** 2 * ((y - realProps.y) ** 2) <= 
+				this.radiusX ** 2 * this.radiusY ** 2) {
+				
+				return true;
+			}
+			return false;
+		}
 	}
 	
 	class Text extends Shape {
@@ -662,13 +718,13 @@ var MYLIB = {};
 		
 		draw() {
 				
-			var parentProperties = this.addParentProperties();
+			var realProperties = this.getRealProperties();
 			
-			var drawX = this.x + parentProperties.x;
-			var drawY = this.y + parentProperties.y;
-			var drawRot = this.rotation + parentProperties.rotation;
-			var drawOpacity = this.opacity * parentProperties.opacity;
-			var drawVisible = this.visible && parentProperties.visible;
+			var drawX = realProperties.x;
+			var drawY = realProperties.y;
+			var drawRot = realProperties.rotation;
+			var drawOpacity = realProperties.opacity;
+			var drawVisible = realProperties.visible;
 		
 			if (drawVisible === true) {
 				
@@ -714,16 +770,15 @@ var MYLIB = {};
 		}
 		
 		pointInside(x, y) {
-			if (x >= this.x && x <= this.x + this.getWidth() &&
-				y >= this.y && y <= this.y + this.getHeight()) {
+			var realProps = this.getRealProperties();
+			if (x >= realProps.x && x <= realProps.x + this.getWidth() &&
+				y >= realProps.y && y <= realProps.y + this.getHeight()) {
 				return true;
 			}
 			return false;
 		}
 	}
 	
-	//works but loads of cleanup to do around fixing not having parameters when called
-	//images will always draw but may draw out of order if not loaded
 	class Sprite extends BaseObject {
 		constructor(url="", x=0, y=0, width=50, height=50) {
 			super(x, y);
@@ -735,30 +790,32 @@ var MYLIB = {};
 			this.height = img.height;
 			
 			if (url !== undefined) {
-				img.src = url;
-			
-				this.image = img;
 				this.loaded = false;
 				
 				var self = this;
+				
+				this.image = img;
+				
 				this.image.addEventListener('load', function() {
 					self.loaded = true;
 				});
+				
+				img.src = url;
 			}
 			
 			this.isSprite = true;
 		}
 		
-		draw() {
+		draw(waitForLoad=true) {
 			if (this.loaded === true) {
 			//if (this.visible === true) {
-				var parentProperties = this.addParentProperties();
-				
-				var drawX = this.x + parentProperties.x;
-				var drawY = this.y + parentProperties.y;
-				var drawRot = this.rotation + parentProperties.rotation;
-				var drawOpacity = this.opacity * parentProperties.opacity;
-				var drawVisible = this.visible && parentProperties.visible;
+				var realProperties = this.getRealProperties();
+			
+				var drawX = realProperties.x;
+				var drawY = realProperties.y;
+				var drawRot = realProperties.rotation;
+				var drawOpacity = realProperties.opacity;
+				var drawVisible = realProperties.visible;
 			
 				if (drawVisible === true) {
 					
@@ -778,12 +835,22 @@ var MYLIB = {};
 					
 					//reset opacity
 					context.globalAlpha = 1;
-				//}
-
+				}
+			} else if (waitForLoad===true) {
+				//console.warn("Loading sprite " + this.name + "...");
+				var realProps = this.getRealProperties();
+				
+				if (this.image.complete === true) {
+					this.loaded = true;
+					this.draw();
+				} else {
+					imageLoad(this.image, realProps.x, realProps.y, this.width, this.height);
 				}
 			} else {
-				//console.warn("image " + this.name + " is not loaded");
-				//imageLoad(this.image, this.x, this.y);
+				if (this.image.complete === true) {
+					this.loaded = true;
+					this.draw();
+				}
 			}
 		}
 		
@@ -798,7 +865,7 @@ var MYLIB = {};
 			this.image.addEventListener('load', function() {
 				//note this = this.image
 				self.loaded = true;
-				if (keepSize) {
+				if (!keepSize) {
 					self.width = this.width;
 					self.height = this.height;
 				}
@@ -811,8 +878,9 @@ var MYLIB = {};
 		}
 		
 		pointInside(x, y) {
-			if (x >= this.x && x <= this.x + this.width &&
-				y >= this.y && y <= this.y + this.height) {
+			var realProps = this.getRealProperties();
+			if (x >= realProps.x && x <= realProps.x + this.width &&
+				y >= realProps.y && y <= realProps.y + this.height) {
 				return true;
 			}
 			return false;
@@ -831,7 +899,7 @@ var MYLIB = {};
 		
 	}
 	
-	/*//draws image when it's loaded
+	//draws image when it's loaded
 	async function imageLoad(img, x, y, width, height) {
 		var result = await waitForImage(img);
 		context.drawImage(img, x, y, width, height);
@@ -840,10 +908,10 @@ var MYLIB = {};
 	function waitForImage(img) {
 		return new Promise(resolve => {
 			img.addEventListener('load', () => {
-				resolve('loaded1');
+				resolve('loaded');
 			});
 		});
-	}*/
+	}
 	
 	class Scene extends BaseObject {
 		constructor(x=0, y=0) {
@@ -852,6 +920,8 @@ var MYLIB = {};
 			this.isScene = true;
 			
 			this.currentTransform = new DOMMatrix([1, 0, 0, 1, 0, 0]);
+			
+			scenes.push(this);
 			
 		}
 		
@@ -924,7 +994,8 @@ var MYLIB = {};
 		context.closePath();
 	}
 	
-	MYLIB.runSpontaneously = runSpontaneously;
+	MYLIB.switchScene = switchScene;
+	MYLIB.Control = Control;
 	MYLIB.BaseObject = BaseObject;
 	MYLIB.Shape = Shape;
 	MYLIB.Rectangle = Rectangle;

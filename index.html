@@ -23,26 +23,31 @@
 				
 				</div><!--
 				--><div id="sceneButtonContainer">
-					<button onclick="newScene()" class="sceneButtons">New Scene</button>
-					<button onclick="deleteScene()" class="sceneButtons">Delete Scene</button>
+					<button id="newSceneButton" class="sceneButtons">New Scene</button>
+					<button id="deleteSceneButton" class="sceneButtons">Delete Scene</button>
 				</div>
 			</div>
 			<div id="variableOverview">
-				<div id="variables">
-					
+				<div id="varNameColumn">
+					<p class="varHeader">Name</p>
+					<div id="varNames"></div>
+				</div>
+				<div id="varValueColumn">
+					<p class="varHeader">Value</p>
+					<div id="varValues"></div>
 				</div>
 				
 				<div id="addVariables">
-					<button onclick="addVariable()" id="addVariableButton">Add Variable</button>
+					<button id="addVariableButton">Add Variable</button>
 					<textarea placeholder="Variable Name" id="variableName" type="text"></textarea>
 				</div>
 			</div>
 			<div id="buttons">
-				<button id="sceneButton" onclick="showScene()">Scene Overview</button>
+				<button id="sceneButton">Scene Overview</button>
 				
-				<button id="projectButton" onclick="showProject()">Project Overview</button>
+				<button id="projectButton">Project Overview</button>
 				
-				<button id="variablesButton" onclick="showVariables()">Global Variables</button>
+				<button id="variablesButton">Global Variables</button>
 			</div>
 		</div>
 	</div>
@@ -56,28 +61,28 @@
 				<span id="toolbarLeftButtons">
 					<button id="addButton">Add</button>
 					<div id="dropdownAddButtons">
-						<button class="addObjectButton" id="addRect" onclick="addObject('Rectangle')">Add Rectangle</button>
-						<button class="addObjectButton" id="addCircle" onclick="addObject('Circle')">Add Circle</button>
-						<button class="addObjectButton" id="addEllipse" onclick="addObject('Ellipse')">Add Ellipse</button>
-						<button class="addObjectButton" id="addText" onclick="addObject('Text')">Add Text</button>
-						<button class="addObjectButton" id="addSprite" onclick="addObject('Sprite')">Add Sprite</button>
+						<button class="addObjectButton" id="addRect">Add Rectangle</button>
+						<button class="addObjectButton" id="addCircle">Add Circle</button>
+						<button class="addObjectButton" id="addEllipse">Add Ellipse</button>
+						<button class="addObjectButton" id="addText">Add Text</button>
+						<button class="addObjectButton" id="addSprite">Add Sprite</button>
 						
 					</div>
-					<button onclick="exportFile()" id="exportButton">Export</button>
-					<label id="importUI" for="importButton">
+					<button id="exportButton">Export</button>
+					<!--<label id="importUI" for="importButton">
 						<span id="importText">Import</span>
-					</label>
-					<input type="file" onchange="importFile()" id="importButton">
-					<button id="deleteButton" onclick="deleteObject()">Delete</button>
-					<button id="fullScreen" onclick="changeFullscreen()">fullscreen</button>
+					</label>-->
+					<input type="file" id="importButton">
+					<button id="deleteButton">Delete</button>
+					<button id="fullScreen">fullscreen</button>
 				</span>
 				
 				<span id="toolbarCentreButtons">
-					<button onclick="play()" id="play">Play</button>
+					<button id="play">Play</button>
 					
-					<button onclick="pause()" id="pause">Pause</button>
+					<button id="pause">Pause</button>
 					
-					<button onclick="stop()" id="stop">Stop</button>
+					<button id="stop">Stop</button>
 				</span>
 				
 				<span id="coords">
@@ -92,11 +97,11 @@
 		--><div id="textEditor">
 			<textarea spellcheck="false" id="textArea"></textarea>
 			<div id="textToolbar">
-				<button onclick="detachTextEditor()" class="textButtons" id="detachButton">Detach</button>
-				<button onclick="increaseFontSize()" class="textButtons" id="increaseSizeButton">Size +</button>
-				<button onclick="decreaseFontSize()" class="textButtons" id="decreaseSizeButton">Size -</button>
-				<select onchange="scriptChange()" id="scriptSelect"></select>
-				<button onclick="createScript()" class="textButtons" id="addScriptButton">New script</button>
+				<button class="textButtons" id="detachButton">Detach</button>
+				<button class="textButtons" id="increaseSizeButton">Size +</button>
+				<button class="textButtons" id="decreaseSizeButton">Size -</button>
+				<select id="scriptSelect"></select>
+				<button class="textButtons" id="addScriptButton">New script</button>
 			</div>
 		</div>
 	</div>
@@ -108,19 +113,33 @@
 		
 		<div id="importArea">
 			<label id="imageButton" for="importImageButton">Import Image</label>
-			<input type="file" onchange="importImage()" accept="image/*" id="importImageButton">
+			<input type="file" accept="image/*" id="importImageButton">
 			
 			<figure>
 				<img id="imagePreview" src="noimage.png" alt="image preview">
 				<figcaption>Image to be inserted</figcaption>
 			</figure>
 			
-			<button onclick="loadImage()" id="useImageButton">Use Image</button>
+			<button id="useImageButton">Use Image</button>
 		</div>
 	</div>
 	
 	<div id="confirmationMenu" class="menu">
 		
+	</div>
+	
+	<div id="exportMenu" class="menu">
+		<div id="exportTitle">
+			<img id="exportBackArrow" src="backImg.svg" alt="Go back">
+			<h1 id="exportTitleText">Export</h1>
+		</div>
+		<div id="exportMain">
+			<p id="exportText">
+				To run the program, you need to have the library in the same folder as the html file
+			</p>
+			<a href="mylibrary.js" download><button id="exportLibraryButton">Download library</button></a>
+			<button id="exportProgramButton">Download program</button>
+		</div>
 	</div>
 	
 	<div id="startMenu" class="menu">
@@ -129,7 +148,7 @@
 		</div>
 		<div id="startMain">
 			<div id="newArea">
-				<button id="newButton" onclick="showNewProject()">New Project</button>
+				<button id="newButton">New Project</button>
 				
 			</div>
 			<div id="existingArea">
@@ -149,7 +168,7 @@
 	<div id="newMenu" class="menu">
 		<!--menu for creating a new project-->
 		<div id="newHeader">
-			<img onclick="showStartMenu()" id="backArrow" src="backImg.svg" alt="Go back">
+			<img id="backArrow" src="backImg.svg" alt="Go back">
 			<h1 id="newText">New Project</h1>
 		</div>
 		<div id="newSettings"><br>
@@ -160,12 +179,14 @@
 			
 			<span>Project Name: </span><input value="Untitled Project" id="newProjectName" type="text"><br><br>
 			
-			<button id="newProjectButton" onclick="newProject()">Create New Project</button>
+			<button id="newProjectButton">Create New Project</button>
 		</div>
 	</div>
 	
 	<script src="mylibrary.js"></script>
 	<script>
+		
+		(function() {
 	
 		"use strict";
 		
@@ -215,6 +236,8 @@
 		var menuUp = false;
 		
 		var scenes = [];
+		
+		var defaultSceneScript = "function update() {\n    MYLIB.clear();\n    this.draw();\n}";
 		
 		var globalVariables = [];
 		var variableTimeout;
@@ -498,6 +521,8 @@
 		
 		var _history = new History();
 		
+		document.getElementById('newProjectButton').addEventListener('click', newProject);
+		
 		function newProject() {
 			//get values for new project and enter them in setupCanvas()
 			
@@ -524,15 +549,17 @@
 		
 		var activeScene;
 		
+		var control;
+		
 		function defaultCode() {
 		
 			MYLIB.setCanvas(canvas);
 			
-			MYLIB.runSpontaneously = false;
+			control = new MYLIB.Control();
+			control.runSpontaneously = false;
 			
 			var scene = new MYLIB.Scene();
-			scene.addScript(`function update() {\n    MYLIB.clear();\n    this.draw();\n}`,
-				'default');//default code to be run in the scene
+			scene.addScript(defaultSceneScript, 'default');//default code to be run in the scene
 			
 			scenes.push(scene);
 			
@@ -655,7 +682,7 @@
 			new Property("strokeColour", 3, 2, "colour", "Stroke Colour"),
 			new Property("strokeSize", 1, 2, "number", "Stroke Size"), 
 			new Property("visible", 3, 3, "boolean", "visible"),
-			new Property("opacity", 2, 3, "number"), 
+			new Property("opacity", 2, 3, "number", "opacity"), 
 			new Property("name", 10, 3, "text", "name");
 			new Property("url", 4, 2, "image", "url");
 			
@@ -788,21 +815,14 @@
 					
 					//selectedObject[e.srcElement.property] = e.srcElement.value;
 					
-					
-					
-					for (var i=0;i<objects.length;i++) {
-						if (e.srcElement.value === objects[i].name) {
+					if (e.srcElement.property === "name") {
+						if (!isLegalVariable(e.srcElement.value)) {
 							e.srcElement.style.backgroundColor = "#FF4444";
 							return "";
 						}
+						
+						e.srcElement.style.backgroundColor = "#FFFFFF";
 					}
-					
-					if (!isLegalVariable(e.srcElement.value)) {
-						e.srcElement.style.backgroundColor = "#FF4444";
-						return "";
-					}
-					
-					e.srcElement.style.backgroundColor = "#FFFFFF";
 					
 					_history.run(new ChangePropertyCommand(selectedObject, e.srcElement.property, 
 						selectedObject[e.srcElement.property], e.srcElement.value));
@@ -1082,14 +1102,19 @@
 		}
 		drawProjectOverview();
 		
+		document.getElementById('newSceneButton').addEventListener('click', newScene);
+		
 		function newScene() {
 			var temp = new MYLIB.Scene();
+			temp.addScript(defaultSceneScript, 'default');
 			scenes.push(temp);
 			activeScene = temp;
 			selectObject(temp);
 			drawScene();
 			drawProjectOverview();
 		}
+		
+		document.getElementById('deleteSceneButton').addEventListener('click', deleteScene);
 		
 		function deleteScene() {
 			if (scenes.length > 1) {
@@ -1107,44 +1132,47 @@
 			drawScene();
 		}
 		
+		function getVariableName(e) {
+			console.log(e, globalVariables[e.target.index]);
+		}
+		
 		function getVariableValue(e) {
 			globalVariables[e.target.index][1] = e.target.value;
 		}
 		
 		function drawVariableOverview() {
-			var variableElement = document.getElementById('variables');
+			var variableNamesElement = document.getElementById('varNames');
+			var variableValuesElement = document.getElementById('varValues');
 			
-			while (variableElement.children.length>0) {
-				variableElement.removeChild(variableElement.children[0]);
+			while (variableNamesElement.children.length>0) {
+				variableNamesElement.removeChild(variableNamesElement.children[0]);
+			}
+			
+			while (variableValuesElement.children.length>0) {
+				variableValuesElement.removeChild(variableValuesElement.children[0]);
 			}
 			
 			for (var i=0;i<globalVariables.length;i++) {
-				var temp = document.createElement("INPUT");
-				temp.type = "text";
-				temp.value = globalVariables[i][0];
-				temp.style.width = temp.value.length * 20 + "px";
-				temp.style.border = "1px solid black";
+				var nameElement = document.createElement("INPUT");
+				nameElement.type = "text";
+				nameElement.value = globalVariables[i][0];
+				nameElement.index = i;
+				nameElement.addEventListener('input', getVariableName);
+				nameElement.className = "varBoxes";
 				
-				variableElement.appendChild(temp);
-				var equals = document.createElement("SPAN");
-				equals.innerHTML = "=";
-				equals.style.display = "inline-block";
-				variableElement.appendChild(equals);
+				variableNamesElement.appendChild(nameElement);
 				
 				var valueElement = document.createElement("INPUT");
-				valueElement.style.display = "inline-block";
-				valueElement.style.border = "1px solid black";
 				valueElement.index = i;
 				valueElement.addEventListener('input', getVariableValue);
+				valueElement.className = "varBoxes";
 				
-				var maxWidth = parseFloat(window.getComputedStyle(variableElement).getPropertyValue('width'));
-				var equalsWidth = parseFloat(window.getComputedStyle(equals).getPropertyValue('width'));
-				
-				valueElement.style.width = (maxWidth - temp.value.length * 20 - equalsWidth) + "px";
-				variableElement.appendChild(valueElement);
+				variableValuesElement.appendChild(valueElement);
 				//console.log(temp, globalVariables);
 			}
 		}
+		
+		document.getElementById('addVariableButton').addEventListener('click', addVariable);
 		
 		function addVariable() {
 			var variableArea = document.getElementById('variableName');
@@ -1197,6 +1225,8 @@
 			drawBrowser();
 		}
 		
+		document.getElementById('useImageButton').addEventListener('click', loadImage);
+		
 		function loadImage() {
 			selectedObject.setImage(selectedImage[0]);
 			selectedObject.url = selectedImage[1];
@@ -1213,6 +1243,8 @@
 				}
 			}
 		}
+		
+		document.getElementById('importImageButton').addEventListener('change', importImage);
 		
 		function importImage() {
 			var imageEle = document.getElementById("importImageButton");
@@ -1348,6 +1380,12 @@
 			scriptChange();
 		}
 		
+		document.getElementById('addRect').addEventListener('click', function() {addObject("Rectangle")});
+		document.getElementById('addCircle').addEventListener('click', function() {addObject("Circle")});
+		document.getElementById('addEllipse').addEventListener('click', function() {addObject("Ellipse")});
+		document.getElementById('addText').addEventListener('click', function() {addObject("Text")});
+		document.getElementById('addSprite').addEventListener('click', function() {addObject("Sprite")});
+		
 		function addObject(type) {
 			var temp = new MYLIB[type]();
 			activeScene.add(temp);
@@ -1356,6 +1394,8 @@
 			drawScene();
 			drawSceneOverview();
 		}
+		
+		document.getElementById('deleteButton').addEventListener('click', deleteObject);
 		
 		function deleteObject() {
 			activeScene.remove(selectedObject);
@@ -1433,6 +1473,10 @@
 			if (e.key === "y" && e.ctrlKey === true) {
 				_history.redo();
 			}
+			if (e.key === "s" && e.ctrlKey === true) {
+				e.preventDefault();
+				saveCurrentState2();
+			}
 		}
 		
 		document.addEventListener('mousedown', function(e) {
@@ -1492,9 +1536,9 @@
 					case true:
 						objectDragged = "object";
 						overlayCanvas.style.cursor = "-webkit-grabbing";
-						var parentDims = selectedObject.addParentProperties();
-						objectPosX = selectedObject.x + parentDims.x;
-						objectPosY = selectedObject.y + parentDims.y;
+						var realDims = selectedObject.getRealProperties();
+						objectPosX = realDims.x;
+						objectPosY = realDims.y;
 						break;
 						
 					case false:
@@ -1502,12 +1546,13 @@
 						var descendents = activeScene.getAllDescendents();
 						var selectedSomething = false;
 						for (var i=0;i<descendents.length;i++) {
-							var dims = {x: descendents[i].x * zoomX, y: descendents[i].y * zoomY, rotation: descendents[i].rotation};
-							var parentDims = descendents[i].addParentProperties();
+							//var dims = {x: descendents[i].x * zoomX, y: descendents[i].y * zoomY, rotation: descendents[i].rotation};
+							var dims = {x: 0, y: 0, rotation: 0};
+							var realDims = descendents[i].getRealProperties();
 							
-							dims.x += parentDims.x + sceneOffsetX * zoomX;
-							dims.y += parentDims.y + sceneOffsetY * zoomY;
-							dims.rotation += parentDims.rotation;
+							dims.x += realDims.x + sceneOffsetX * zoomX;
+							dims.y += realDims.y + sceneOffsetY * zoomY;
+							dims.rotation += realDims.rotation;
 							
 							var selected = false;
 							
@@ -1558,7 +1603,6 @@
 									descendents[i].radiusX ** 2 * descendents[i].radiusY ** 2) {
 									
 									selected = true;
-								
 								}
 							}
 							
@@ -1632,12 +1676,13 @@
 			
 			overlayCtx.save();
 			
-			var selectedDims = {x: selectedObject.x * zoomX, y: selectedObject.y * zoomY, rotation: selectedObject.rotation};
-			var parentDims = selectedObject.addParentProperties();
+			//var selectedDims = {x: selectedObject.x * zoomX, y: selectedObject.y * zoomY, rotation: selectedObject.rotation};
+			var selectedDims = {x: 0, y: 0, rotation: 0};
+			var realDims = selectedObject.getRealProperties();
 			
-			selectedDims.x += parentDims.x + sceneOffsetX * zoomX;
-			selectedDims.y += parentDims.y + sceneOffsetY * zoomY;
-			selectedDims.rotation += parentDims.rotation;
+			selectedDims.x += realDims.x + sceneOffsetX * zoomX;
+			selectedDims.y += realDims.y + sceneOffsetY * zoomY;
+			selectedDims.rotation += realDims.rotation;
 			
 			if (selectedObject.rotationAngleMode === "DEG") {
 				selectedDims.rotation *= Math.PI / 180;
@@ -1960,7 +2005,7 @@
 				}
 			}
 			
-			exportDoc += "MYLIB.createCanvas()\n";
+			exportDoc += "MYLIB.createCanvas();\n";
 			
 			for (var i=0;i<scenes.length;i++) {
 				j=0;
@@ -1991,8 +2036,9 @@
 								exportDoc += name + ".addScript(`" + object.scripts[m].code + "`, \"" + object.scripts[m].name + "\");\n";
 							}
 						} else if (k === "url") {
-							exportDoc += name + ".setImage('" + getBase64Image(object.image) + "');\n";
-						} else if (k !== "parent" && k !== "image" && k !== "loaded") {
+							console.log(object);
+							exportDoc += name + ".setImage('" + object.image.src + "', true);\n";
+						} else if (k !== "parent" && k !== "image" && k !== "loaded" && k !== "currentTransform") {
 							if (typeof object[k] === "string") {
 								exportDoc += name + "." + k + " = \"" + object[k] + "\";\n";
 							} else {
@@ -2016,7 +2062,7 @@
 			return dataURL;
 		}
 		
-		function toDataURL(url) {
+		/*function toDataURL(url) {
 			var xhr = new XMLHttpRequest();
 			xhr.onload = function() {
 				var reader = new FileReader();
@@ -2028,11 +2074,13 @@
 			xhr.open('GET', url);
 			xhr.responseType = 'blob';
 			xhr.send();
-		}
+		}*/
+		
+		document.getElementById('exportProgramButton').addEventListener('click', exportFile);
 		
 		function exportFile() {
 			var content = produceDocument();
-			var fileName = "test.html";
+			var fileName = projectName + ".html";
 			
 			//download(fileName, content);
 			var element = document.createElement('a');
@@ -2087,6 +2135,8 @@
 		function validateDocument(readDoc) {
 			//:/
 		}
+		
+		document.getElementById('importButton').addEventListener('change', importFile);
 		
 		function importFile() {
 			var importfile = document.getElementById('importButton');
@@ -2184,7 +2234,6 @@
 					currentObject.add(temp);
 					child = false;
 				} else {
-					console.log(ups);
 					var parentObj;
 					var tempObj = currentObject.parent;
 					
@@ -2192,7 +2241,6 @@
 						tempObj = tempObj.parent;
 						ups--;
 					}
-					console.log(tempObj);
 					tempObj.add(temp);
 				}
 				objects.push(temp);
@@ -2223,8 +2271,6 @@
 				//changing prototypes to what they should be
 				
 				var newScenes = [];
-				
-				console.log(data);
 				
 				for (var i=0;i<data.scenes.length;i++) {
 					var newScene = convertObj(data.scenes[i]);
@@ -2259,6 +2305,8 @@
 					
 				}
 				
+				drawVariableOverview();
+				
 				projectName = data.metadata.name;
 				
 			} else {
@@ -2283,7 +2331,6 @@
 				}
 				if (obj.isSprite) {
 					newObj = new MYLIB.Sprite();
-					console.log(obj.image, obj);
 					newObj.setImage(obj.image, true);
 				}
 				if (obj.isScene) {
@@ -2295,6 +2342,8 @@
 						newObj[k] = obj[k];
 					}
 				}
+				
+				objects.push(newObj);
 				
 				return newObj;
 			}
@@ -2372,8 +2421,6 @@
 								obj.image = obj.image.src;
 							}
 						}
-						
-						console.log(scenes, newScenes);
 
 						dataObj.scenes = newScenes;
 						
@@ -2572,7 +2619,6 @@
 					
 					getRequest.onsuccess = function(e) {
 						if (!e.target.result) {
-							console.log(storeName);
 							return "";
 						}
 						addPreviewBox(e.target.result, e.target.source.name);
@@ -2654,7 +2700,6 @@
 			
 			loadCurrentState2(data);
 			
-			drawScene();
 			drawSceneOverview();
 			drawProjectOverview();
 			drawProperties();
@@ -2763,11 +2808,16 @@
 		/*
 			Functions that change the layout of the page
 		*/
+		
+		document.getElementById('sceneButton').addEventListener('click', showScene);
+		
 		function showScene() {
 			document.getElementById('sceneOverview').style.display = "block";
 			document.getElementById('projectOverview').style.display = "none";
 			document.getElementById('variableOverview').style.display = "none";
 		}
+		
+		document.getElementById('projectButton').addEventListener('click', showProject);
 		
 		function showProject() {
 			document.getElementById('projectOverview').style.display = "block";
@@ -2775,11 +2825,15 @@
 			document.getElementById('variableOverview').style.display = "none";
 		}
 		
+		document.getElementById('variablesButton').addEventListener('click', showVariables);
+		
 		function showVariables() {
 			document.getElementById('projectOverview').style.display = "none";
 			document.getElementById('sceneOverview').style.display = "none";
 			document.getElementById('variableOverview').style.display = "block";
 		}
+		
+		document.getElementById('detachButton').addEventListener('click', detachTextEditor);
 		
 		function detachTextEditor() {
 			var myStyleSheet;
@@ -2842,6 +2896,8 @@
 			newWindow.close();
 		}
 		
+		document.getElementById('fullScreen').addEventListener('click', changeFullscreen);
+		
 		function changeFullscreen() {
 			var bg = document.getElementById("viewport");
 			
@@ -2874,9 +2930,13 @@
 			}
 		}
 		
+		document.getElementById('increaseSizeButton').addEventListener('click', increaseFontSize);
+		
 		function increaseFontSize() {
 			changeFontSize(1);
 		}
+		
+		document.getElementById('decreaseSizeButton').addEventListener('click', decreaseFontSize);
 		
 		function decreaseFontSize() {
 			changeFontSize(-1);
@@ -2887,6 +2947,8 @@
 			textArea.style.fontSize = fontSize + amount + 'px';
 		}
 		
+		document.getElementById('play').addEventListener('click', play);
+		
 		function play() {
 			if (menusDisabled === false) {
 				overlayCanvas.style.display = "none";
@@ -2896,17 +2958,35 @@
 					window[globalVariables[i][0]] = globalVariables[i][1];
 				}
 				
-				//change later to first scene
-				MYLIB.run(activeScene.clone());
+				var newScenes = [];
+				
+				for (var i=0;i<scenes.length;i++) {
+					newScenes.push(scenes[i].clone());
+				}
+				
+				for (var i=0;i<newScenes.length;i++) {
+					makeGlobalVar(newScenes[i]);
+				}
+				
+				MYLIB.run(newScenes[0]);
 				running = true;
 				disableMenus();
 			}
 			if (paused === true) {
-				MYLIB.run(activeScene.clone());
+				MYLIB.run();
 				running = true;
 				paused = false;
 			}
+			
+			function makeGlobalVar(obj) {
+				window[obj.name] = obj;
+				for (var j=0;j<obj.children.length;j++) {
+					makeGlobalVar(obj.children[j]);
+				}
+			}
 		}
+		
+		document.getElementById('pause').addEventListener('click', pause);
 		
 		function pause() {
 			if (running === true) {
@@ -2915,6 +2995,8 @@
 				running = false;
 			}
 		}
+		
+		document.getElementById('stop').addEventListener('click', stop);
 		
 		function stop() {
 			MYLIB.stop();
@@ -2931,6 +3013,12 @@
 				return false;
 			}
 			
+			for (var i=0;i<objects.length;i++) {
+				if (name === objects[i].name) {
+					return false;
+				}
+			}
+			
 			//check reserved words?
 			
 			return true;
@@ -2941,6 +3029,8 @@
 			var value = scriptElement.value;
 			selectedObject.updateScript(value, textArea.value);
 		}
+		
+		document.getElementById('addScriptButton').addEventListener('click', createScript);
 		
 		function createScript() {
 			textArea.value = "";//default script
@@ -2955,6 +3045,8 @@
 			temp.innerHTML = script.name;
 			scriptElement.appendChild(temp);
 		}
+		
+		document.getElementById('scriptSelect').addEventListener('change', scriptChange);
 		
 		function scriptChange() {
 			var value = scriptElement.value;
@@ -3014,10 +3106,28 @@
 			scriptChange();
 		}
 		
+		document.getElementById('exportButton').addEventListener('click', showExportMenu);
+		
+		function showExportMenu() {
+			document.getElementById("exportMenu").style.display = "block";
+			disableMenus();
+		}
+		
+		document.getElementById('exportBackArrow').addEventListener('click', hideExportMenu);
+		
+		function hideExportMenu() {
+			document.getElementById("exportMenu").style.display = "none";
+			enableMenus();
+		}
+		
+		document.getElementById('newButton').addEventListener('click', showNewProject);
+		
 		function showNewProject() {
 			document.getElementById("startMenu").style.display = "none";
 			document.getElementById("newMenu").style.display = "block";
 		}
+		
+		document.getElementById('backArrow').addEventListener('click', showStartMenu);
 		
 		function showStartMenu() {
 			document.getElementById("newMenu").style.display = "none";
@@ -3025,6 +3135,8 @@
 			
 			loadProjectBrowser();
 		}
+		
+		})();
 		
 	</script>
 	
