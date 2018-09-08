@@ -137,7 +137,7 @@
 			<p id="exportText">
 				To run the program, you need to have the library in the same folder as the html file
 			</p>
-			<a href="mylibrary.js" download><button id="exportLibraryButton">Download library</button></a>
+			<a href="S7.js" download><button id="exportLibraryButton">Download library</button></a>
 			<button id="exportProgramButton">Download program</button>
 		</div>
 	</div>
@@ -183,7 +183,7 @@
 		</div>
 	</div>
 	
-	<script src="mylibrary.js"></script>
+	<script src="S7.js"></script>
 	<script>
 		
 		(function() {
@@ -235,9 +235,11 @@
 		
 		var menuUp = false;
 		
+		var clipboard;
+		
 		var scenes = [];
 		
-		var defaultSceneScript = "function update() {\n    MYLIB.clear();\n    this.draw();\n}";
+		var defaultSceneScript = "function update() {\n    S7.clear();\n    this.draw();\n}";
 		
 		var globalVariables = [];
 		var variableTimeout;
@@ -553,12 +555,12 @@
 		
 		function defaultCode() {
 		
-			MYLIB.setCanvas(canvas);
+			S7.setCanvas(canvas);
 			
-			control = new MYLIB.Control();
+			control = new S7.Control();
 			control.runSpontaneously = false;
 			
-			var scene = new MYLIB.Scene();
+			var scene = new S7.Scene();
 			scene.addScript(defaultSceneScript, 'default');//default code to be run in the scene
 			
 			scenes.push(scene);
@@ -573,10 +575,10 @@
 		
 		function testCode() {
 		
-			var circ = new MYLIB.Circle(350, 100, 60);
+			var circ = new S7.Circle(350, 100, 60);
 			activeScene.add(circ);
 			
-			var rect = new MYLIB.Rectangle(30, 300, 100, 50);
+			var rect = new S7.Rectangle(30, 300, 100, 50);
 			rect.rotation = 1;
 			activeScene.add(rect);
 			rect.addScript(textArea.value);	
@@ -588,7 +590,7 @@
 			
 			selectedObject = rect;
 			
-			var rect2 = new MYLIB.Rectangle(50, 100, 100, 50);
+			var rect2 = new S7.Rectangle(50, 100, 100, 50);
 			
 			rect2.name = "fireRect";
 			rect2.fill = true;
@@ -596,16 +598,16 @@
 			
 			activeScene.add(rect2);
 			
-			var rect3 = new MYLIB.Rectangle(10, 10, 50, 20);
+			var rect3 = new S7.Rectangle(10, 10, 50, 20);
 			rect3.name = "testRecto";
 			rect2.add(rect3);
 			
-			var text = new MYLIB.Text("Hello!", 500, 300);
+			var text = new S7.Text("Hello!", 500, 300);
 			text.fontSize = 40;
 			text.rotation = 0;
 			activeScene.add(text);
 			
-			var image = new MYLIB.Sprite();
+			var image = new S7.Sprite();
 			activeScene.add(image);
 			selectedObject = image;
 			
@@ -1105,7 +1107,7 @@
 		document.getElementById('newSceneButton').addEventListener('click', newScene);
 		
 		function newScene() {
-			var temp = new MYLIB.Scene();
+			var temp = new S7.Scene();
 			temp.addScript(defaultSceneScript, 'default');
 			scenes.push(temp);
 			activeScene = temp;
@@ -1387,7 +1389,7 @@
 		document.getElementById('addSprite').addEventListener('click', function() {addObject("Sprite")});
 		
 		function addObject(type) {
-			var temp = new MYLIB[type]();
+			var temp = new S7[type]();
 			activeScene.add(temp);
 			objects.push(temp);
 			selectObject(temp);
@@ -1424,7 +1426,7 @@
 			canvas.style.top = sceneOffsetY + "px";
 			canvas.style.backgroundColor = "white";
 			
-			MYLIB.clear();
+			S7.clear();
 			
 			activeScene.draw();
 			
@@ -1993,7 +1995,7 @@
 			exportDoc = "\<!DOCTYPE html\>\n";
 			exportDoc += "\<html\>\n";
 			exportDoc += "\<body\>\n";
-			exportDoc += "\<script src='mylibrary.js'\>" + "\</script\>\n";
+			exportDoc += "\<script src='S7.js'\>" + "\</script\>\n";
 			exportDoc += "\<script\>\n";
 			
 			for (var i=0;i<globalVariables.length;i++) {
@@ -2005,7 +2007,7 @@
 				}
 			}
 			
-			exportDoc += "MYLIB.createCanvas();\n";
+			exportDoc += "S7.createCanvas();\n";
 			
 			for (var i=0;i<scenes.length;i++) {
 				j=0;
@@ -2020,7 +2022,7 @@
 				j++;
 				var name = object.name;
 				exportDoc += "var " + name + 
-					" = new MYLIB." + object.constructor.name + "();\n";
+					" = new S7." + object.constructor.name + "();\n";
 				
 				//make sure only set necessary things
 				var base = new object.constructor();
@@ -2196,7 +2198,7 @@
 						child=true;
 						/*var nextObj = getNextSubString(index);
 						console.log(nextObj);
-						var temp = new MYLIB[nextObj]();
+						var temp = new S7[nextObj]();
 						currentObject.add(temp);
 						objects.push(temp);
 						currentObject = temp;*/
@@ -2229,7 +2231,7 @@
 			}
 			
 			function newObject(type) {
-				var temp = new MYLIB[type]();
+				var temp = new S7[type]();
 				if (child === true) {
 					currentObject.add(temp);
 					child = false;
@@ -2248,7 +2250,7 @@
 			}
 			
 			function addNewScene() {
-				currentScene = new MYLIB.Scene();
+				currentScene = new S7.Scene();
 				currentObject = currentScene;
 				activeScene = currentScene;
 				scenes.push(currentScene);
@@ -2261,7 +2263,9 @@
 		}
 		
 		function saveCurrentState2() {
-			openDB(false);
+			if (!running) {
+				openDB(false);
+			}
 		}
 		
 		function loadCurrentState2(data) {
@@ -2318,23 +2322,23 @@
 				var newObj;
 				
 				if (obj.isRectangle) {
-					newObj = new MYLIB.Rectangle();
+					newObj = new S7.Rectangle();
 				}
 				if (obj.isCircle) {
-					newObj = new MYLIB.Circle();
+					newObj = new S7.Circle();
 				}
 				if (obj.isEllipse) {
-					newObj = new MYLIB.Ellipse();
+					newObj = new S7.Ellipse();
 				}
 				if (obj.isText) {
-					newObj = new MYLIB.Text();
+					newObj = new S7.Text();
 				}
 				if (obj.isSprite) {
-					newObj = new MYLIB.Sprite();
+					newObj = new S7.Sprite();
 					newObj.setImage(obj.image, true);
 				}
 				if (obj.isScene) {
-					newObj = new MYLIB.Scene();
+					newObj = new S7.Scene();
 				}
 				
 				for (var k in obj) {
@@ -2439,11 +2443,11 @@
 						
 						//low quality because only needs to be small image
 						
-						MYLIB.clear();
+						S7.clear();
 						
 						//make background white because jpeg doesn't support transparency
-						MYLIB.context.fillStyle = "#FFFFFF";
-						MYLIB.context.fillRect(0, 0, canvas.width, canvas.height);
+						S7.context.fillStyle = "#FFFFFF";
+						S7.context.fillRect(0, 0, canvas.width, canvas.height);
 			
 						activeScene.draw();
 						
@@ -2952,7 +2956,9 @@
 		function play() {
 			if (menusDisabled === false) {
 				overlayCanvas.style.display = "none";
-				MYLIB.clear();
+				running = true;
+				disableMenus();
+				S7.clear();
 				
 				for (var i=0;i<globalVariables.length;i++) {
 					window[globalVariables[i][0]] = globalVariables[i][1];
@@ -2968,12 +2974,11 @@
 					makeGlobalVar(newScenes[i]);
 				}
 				
-				MYLIB.run(newScenes[0]);
-				running = true;
-				disableMenus();
+				S7.run(newScenes[0]);
+				
 			}
 			if (paused === true) {
-				MYLIB.run();
+				S7.run();
 				running = true;
 				paused = false;
 			}
@@ -2990,7 +2995,7 @@
 		
 		function pause() {
 			if (running === true) {
-				MYLIB.pause();
+				S7.pause();
 				paused = true;
 				running = false;
 			}
@@ -2999,7 +3004,7 @@
 		document.getElementById('stop').addEventListener('click', stop);
 		
 		function stop() {
-			MYLIB.stop();
+			S7.stop();
 			overlayCanvas.style.display = "block";
 			paused = false;
 			running = false;

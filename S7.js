@@ -1,4 +1,4 @@
-var MYLIB = {};
+var S7 = {};
 (function () {
 	
 	/*
@@ -8,6 +8,7 @@ var MYLIB = {};
 	var canvas;
 	var context;
 	
+	var startTime;
 	var lastTime;
 	var deltaTime;
 	
@@ -55,6 +56,8 @@ var MYLIB = {};
 	function setup(scene) {
 		
 		currentControl.currentScene = scene;
+		
+		startTime = Date.now();
 		
 		for (var i=0;i<nameOfFunctions.length;i++) {
 			if (!functionList[nameOfFunctions[i]]) {
@@ -194,8 +197,8 @@ var MYLIB = {};
 		canvas = document.createElement("CANVAS");	
 		context = canvas.getContext("2d");
 		
-		MYLIB.canvas = canvas;
-		MYLIB.context = context;
+		S7.canvas = canvas;
+		S7.context = context;
 		
 		canvas.width = width;
 		canvas.height = height;
@@ -211,8 +214,8 @@ var MYLIB = {};
 		canvas = userCanvas;
 		context = canvas.getContext("2d");
 		
-		MYLIB.canvas = canvas;
-		MYLIB.context = context;
+		S7.canvas = canvas;
+		S7.context = context;
 	}
 	
 	function parseScript(script, object) {
@@ -246,6 +249,10 @@ var MYLIB = {};
 	
 	function animate() {
 		if (paused === false && running === true) {
+			
+			S7.ftime = (Date.now() - startTime)/1000;
+			S7.time = Math.floor(S7.ftime);
+			
 			for (var i=0;i<functionList.update.length;i++) {
 				functionList.update[i][0]();
 			}
@@ -354,10 +361,19 @@ var MYLIB = {};
 			
 			//use for ... in?
 			copy.name = this.name;
-			copy.parent = this.parent;
+			if (this.parent) {
+				this.parent.add(copy);
+			}
 			copy.rotation = this.rotation;
 			copy.rotationAngleMode = this.rotationAngleMode;
 			copy.scripts = this.scripts;
+			
+			if (running) {
+				for (var i=0;i<copy.scripts.length;i++) {
+					parseScript(copy.scripts[i], copy);
+				}
+			}
+			
 			copy.x = this.x;
 			copy.y = this.y;
 			copy.visible = this.visible;
@@ -994,21 +1010,21 @@ var MYLIB = {};
 		context.closePath();
 	}
 	
-	MYLIB.switchScene = switchScene;
-	MYLIB.Control = Control;
-	MYLIB.BaseObject = BaseObject;
-	MYLIB.Shape = Shape;
-	MYLIB.Rectangle = Rectangle;
-	MYLIB.Circle = Circle;
-	MYLIB.Ellipse = Ellipse;
-	MYLIB.Scene = Scene;
-	MYLIB.Text = Text;
-	MYLIB.Sprite = Sprite;
-	MYLIB.createCanvas = createCanvas;
-	MYLIB.setCanvas = setCanvas;
-	MYLIB.clear = clear;
-	MYLIB.switchScene = switchScene;
-	MYLIB.run = run;
-	MYLIB.pause = pause;
-	MYLIB.stop = stop;
+	S7.switchScene = switchScene;
+	S7.Control = Control;
+	S7.BaseObject = BaseObject;
+	S7.Shape = Shape;
+	S7.Rectangle = Rectangle;
+	S7.Circle = Circle;
+	S7.Ellipse = Ellipse;
+	S7.Scene = Scene;
+	S7.Text = Text;
+	S7.Sprite = Sprite;
+	S7.createCanvas = createCanvas;
+	S7.setCanvas = setCanvas;
+	S7.clear = clear;
+	S7.switchScene = switchScene;
+	S7.run = run;
+	S7.pause = pause;
+	S7.stop = stop;
 })();
