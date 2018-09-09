@@ -2,6 +2,7 @@
 <html>
 <head>
 	<link rel="stylesheet" type="text/css" href="style.css">
+	<title>S7</title>
 </head>
 <body>
 	<div id="header">
@@ -148,8 +149,8 @@
 		</div>
 		<div id="startMain">
 			<div id="newArea">
-				<button id="newButton">New Project</button>
-				
+				<button class="startButtons" id="newButton">New Project</button>
+				<button class="startButtons" id="helpButton">Help</button>
 			</div>
 			<div id="existingArea">
 				
@@ -199,7 +200,7 @@
 		const SELECTED_BACKGROUND_COLOR = "#3300FF";
 		const SELECTED_TEXT_COLOR = "#FFFFFF";
 		
-		const databaseName = "S7projects";//NOTE CHANGE LATER WHEN PROJECT GETS NAME
+		const databaseName = "S7projects";
 		
 		var points = {};
 		var squareSize;
@@ -225,6 +226,8 @@
 		var mousePosY = 0;
 		
 		var backgroundColour = "#AAAAAA";
+		
+		document.getElementById("background").style.backgroundColor = backgroundColour;
 		
 		var mouseDown = false;
 		
