@@ -276,7 +276,7 @@
 		
 		//note width/height are only needed for resize(),
 		//ratio is only needed for constrain
-		var canvasWidth, canvasHeight, canvasRatio;
+		var canvasWidth=500, canvasHeight=300, canvasRatio;
 		
 		var canvasMode;
 		
@@ -288,11 +288,14 @@
 		
 			var bg = window.getComputedStyle(document.getElementById('background'));
 			
+			var maxWidth = parseInt(bg.getPropertyValue("width").slice(0, -2));
+			var maxHeight = parseInt(bg.getPropertyValue("height").slice(0, -2));
+			
 			overlayCanvas.style.width = bg.getPropertyValue("width");
 			overlayCanvas.style.height = bg.getPropertyValue("height");
 			
-			overlayCanvas.width = bg.getPropertyValue("width").slice(0, -2);
-			overlayCanvas.height = bg.getPropertyValue("height").slice(0, -2);
+			overlayCanvas.width = maxWidth;
+			overlayCanvas.height = maxHeight;
 			
 			if (!mode) {
 				canvasMode = "sized";
@@ -303,7 +306,6 @@
 			if (mode === "constrain") {
 				window.addEventListener("resize", resizeConstrain);
 				canvasRatio = height / width;
-				console.log(height, width, canvasRatio);
 				resizeConstrain();
 			} else if (mode === "autosize") {
 				window.addEventListener("resize", resizeAutosize);
@@ -314,10 +316,11 @@
 				canvasHeight = height;
 				resize();
 			}
-			
 		}
 		
 		function resize() {
+		
+			var bg = window.getComputedStyle(document.getElementById('background'));
 			
 			canvas.style.width = canvasWidth + "px";
 			canvas.style.height = canvasHeight + "px";
@@ -334,18 +337,18 @@
 			var maxHeight = parseInt(bg.getPropertyValue("height").slice(0, -2));
 			
 			if (maxWidth * canvasRatio < maxHeight) {
-				var width = maxWidth;
-				var height = maxWidth * canvasRatio;
+				canvasWidth = maxWidth;
+				canvasHeight = maxWidth * canvasRatio;
 			} else {
-				var height = maxHeight;
-				var width = maxHeight / canvasRatio;
+				canvasWidth = maxHeight;
+				canvasHeight = maxHeight / canvasRatio;
 			}
 			
-			canvas.style.width = width + "px";
-			canvas.style.height = height + "px";
+			canvas.style.width = canvasWidth + "px";
+			canvas.style.height = canvasHeight + "px";
 			
-			canvas.width = width;
-			canvas.height = height;
+			canvas.width = canvasWidth;
+			canvas.height = canvasHeight;
 			
 			drawScene();
 		}
@@ -356,11 +359,14 @@
 			var width = bg.getPropertyValue("width");
 			var height = bg.getPropertyValue("height");
 			
+			cavnasWidth = width.slice(0, -2);
+			canvasHeight = height.slice(0, -2);
+			
 			canvas.style.width = width;
 			canvas.style.height = height;
 			
-			canvas.width = width.slice(0, -2);
-			canvas.height = height.slice(0, -2);
+			canvas.width = canvasWidth;
+			canvas.height = canvasHeight;
 			
 			drawScene();
 		}
@@ -1423,8 +1429,11 @@
 		}
 		
 		function drawScene() {
+			var bg = window.getComputedStyle(document.getElementById('background'));
+
 			canvas.style.left = sceneOffsetX + "px";
 			canvas.style.top = sceneOffsetY + "px";
+			
 			canvas.style.backgroundColor = "white";
 			
 			S7.clear();
@@ -1825,10 +1834,12 @@
 						break;
 						
 					case "scene":
-						sceneOffsetX += changeX;
-						sceneOffsetY += changeY;
-						
-						drawScene();
+						if (e.altKey === true) {
+							sceneOffsetX += changeX;
+							sceneOffsetY += changeY;
+							
+							drawScene();
+						}
 						break;
 						
 					case "topLeft":
